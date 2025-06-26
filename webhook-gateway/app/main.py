@@ -1,12 +1,16 @@
 from fastapi import FastAPI
 from app.db.base import Base
 from app.db.session import engine
+from app.api.v1.endpoints import ingest
 
 app = FastAPI(
     title="Webhook Gateway",
     description="A gateway to receive, process, and dispatch webhooks asynchronously.",
     version="0.1.0",
 )
+
+# Include API routers
+app.include_router(ingest.router, prefix="/api/v1", tags=["webhooks"])
 
 @app.on_event("startup")
 async def on_startup():
@@ -17,4 +21,9 @@ async def on_startup():
 @app.get("/")
 def read_root():
     """A simple endpoint to confirm the service is running."""
-    return {"status": "ok"}
+    return {"status": "ok", "service": "webhook-gateway"}
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy", "service": "webhook-gateway"}

@@ -1,7 +1,7 @@
 # Webhook Gateway: Implementation Plan & TODO
 
 **Project:** Webhook Gateway Service
-**Stack:** Python, FastAPI, Pydantic, Celery, RabbitMQ, MySQL, uv, uvicorn
+**Stack:** Python, FastAPI, Pydantic, Celery, Redis, MySQL, uv, uvicorn
 **Note:** This plan is designed to handle multiple payload formats including JSON, XML, and x-www-form-urlencoded.
 
 ---
@@ -160,12 +160,14 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
-  rabbitmq:
-    image: rabbitmq:3.9-management
-    container_name: webhook_rabbitmq
+  redis:
+    image: redis:7-alpine
+    container_name: webhook_redis
     ports:
-      - "5672:5672"  # AMQP
-      - "15672:15672" # Management UI
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
 
   api:
     build: .
@@ -177,7 +179,7 @@ services:
       - "8000:8000"
     depends_on:
       - db
-      - rabbitmq
+      - redis
     env_file:
       - .env
 
@@ -189,12 +191,13 @@ services:
       - .:/app
     depends_on:
       - db
-      - rabbitmq
+      - redis
     env_file:
       - .env
 
 volumes:
   mysql_data:
+  redis_data:
 ```
 
 ## 5. TODO List
@@ -204,21 +207,25 @@ volumes:
 - [x] Create `pyproject.toml` and define dependencies.
 - [x] Use `uv` to create a virtual environment and install dependencies (`uv venv` & `uv pip sync`).
 - [x] **Dependencies**: `fastapi`, `uvicorn`, `pydantic`, `sqlalchemy`, `mysqlclient`, `celery`, `redis`, `alembic`, `python-multipart`, `lxml`.
-- [ ] Create `Dockerfile` and `docker-compose.yml`.
+- [x] Create `Dockerfile` and `docker-compose.yml`.
 - [x] Implement Pydantic settings in `app/core/config.py`.
 - [x] **Define SQLAlchemy models in `app/db/models.py` (ensure `event_logs` has `content_type` and `payload` as LONGTEXT).**
 - [x] Set up database session management (`app/db/session.py`) and initialize Alembic for migrations.
+- [x] Configure Celery application in `app/worker/celery_app.py`.
+- [x] Create basic Celery tasks structure in `app/worker/tasks.py`.
 
 ### Phase 2: Ingestion Logic
-- [ ] **Implement the `POST /ingest/{source}/{topic}` endpoint to handle raw bodies and content types.**
-- [ ] Implement HMAC signature verification logic in `app/core/security.py` to work with the raw body.
-- [ ] Create a FastAPI dependency to perform the verification.
-- [ ] Implement logging of incoming events to the modified `event_logs` table.
+- [x] **Implement the `POST /ingest/{source}/{topic}` endpoint to handle raw bodies and content types.**
+- [x] Implement HMAC signature verification logic in `app/core/security.py` to work with the raw body.
+- [x] Create a FastAPI dependency to perform the verification.
+- [x] Implement logging of incoming events to the modified `event_logs` table.
+- [x] Update main application with API routers.
+- [x] Create Pydantic schemas for API responses.
 
 ### Phase 3: Background Worker & Dispatching
-- [ ] Configure Celery application in `app/worker/celery_app.py`.
-- [ ] Create the `dispatch_webhooks` Celery task.
-- [ ] **Create the `send_to_subscriber` sub-task, ensuring it forwards the original `Content-Type` and raw payload.**
+- [x] Configure Celery application in `app/worker/celery_app.py`.
+- [x] Create the `dispatch_webhooks` Celery task.
+- [x] **Create the `send_to_subscriber` sub-task, ensuring it forwards the original `Content-Type` and raw payload.**
 - [ ] Implement logging to the `dispatch_logs` table from the Celery task.
 - [ ] Test the full flow with JSON, form-data, and XML payloads.
 

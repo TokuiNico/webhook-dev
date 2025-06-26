@@ -1,14 +1,39 @@
 from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
 
 class TopicBase(BaseModel):
     name: str
-    description: str | None = None
+    description: Optional[str] = None
 
 class TopicCreate(TopicBase):
+    source_id: int
+
+class TopicUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+class TopicResponse(TopicBase):
+    id: int
+    source_id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class SourceBase(BaseModel):
+    name: str
+    secret: str
+
+class SourceCreate(SourceBase):
     pass
 
-class TopicRead(TopicBase):
+class SourceResponse(BaseModel):
     id: int
-
+    name: str
+    created_at: datetime
+    updated_at: datetime
+    
     class Config:
-        orm_mode = True
+        from_attributes = True
