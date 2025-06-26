@@ -3,9 +3,9 @@ import asyncio
 from celery import current_task
 from celery.exceptions import Retry
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, create_engine
 from app.worker.celery_app import celery_app
-from app.db.session import AsyncSessionLocal
+from app.db.session import SessionLocal
 from app.db.models import EventLog, Subscription, Topic, DispatchLog
 from typing import Dict, Any, List
 import logging
@@ -24,11 +24,52 @@ def dispatch_webhooks(self, event_log_id: int):
     try:
         logger.info(f"Starting dispatch for event_log_id: {event_log_id}")
         
-        # Run async function in sync context
-        result = asyncio.run(_dispatch_webhooks_async(event_log_id))
-        
-        logger.info(f"Dispatched event {event_log_id} to {result['subscription_count']} subscribers")
-        return result
+        # Use synchronous database operations for Celery tasks
+        db = SessionLocal()
+        try:
+            # 1. Get event log from database
+            event_log = db.query(EventLog).filter(EventLog.id == event_log_id).first()
+            
+            if not event_log:
+                raise ValueError(f"Event log {event_log_id} not found")
+            
+            # 2. Get all active subscriptions for the topic
+            subscriptions = db.query(Subscription).filter(
+                Subscription.topic_id == event_log.topic_id,
+                Subscription.is_active == True
+            ).all()
+            
+            logger.info(f"Found {len(subscriptions)} active subscriptions for topic {event_log.topic_id}")
+            
+            # 3. For each subscription, create a send_to_subscriber task
+            dispatched_count = 0
+            for subscription in subscriptions:
+                # Prepare event data for the task
+                event_data = {
+                    "event_log_id": event_log.id,
+                    "content_type": event_log.content_type,
+                    "payload": event_log.payload,
+                    "headers": event_log.headers,
+                    "target_url": subscription.target_url
+                }
+                
+                # Launch async task
+                send_to_subscriber.delay(subscription.id, event_data)
+                dispatched_count += 1
+                
+                logger.info(f"Queued dispatch to subscription {subscription.id} ({subscription.subscriber_name})")
+            
+            result = {
+                "event_log_id": event_log_id,
+                "subscription_count": dispatched_count,
+                "status": "dispatched"
+            }
+            
+            logger.info(f"Dispatched event {event_log_id} to {result['subscription_count']} subscribers")
+            return result
+            
+        finally:
+            db.close()
         
     except Exception as exc:
         logger.error(f"Error dispatching webhooks for event {event_log_id}: {exc}")
@@ -99,8 +140,15 @@ def send_to_subscriber(self, subscription_id: int, event_log_data: Dict[str, Any
     try:
         logger.info(f"Sending webhook to subscription {subscription_id}")
         
-        # Run async function in sync context
-        result = asyncio.run(_send_to_subscriber_async(subscription_id, event_log_data, self.request.retries))
+        # Check if we're already in an event loop (eager mode)
+        try:
+            loop = asyncio.get_running_loop()
+            # We're in an event loop, create a task instead
+            task = loop.create_task(_send_to_subscriber_async(subscription_id, event_log_data, self.request.retries))
+            result = loop.run_until_complete(task)
+        except RuntimeError:
+            # No running loop, safe to use asyncio.run()
+            result = asyncio.run(_send_to_subscriber_async(subscription_id, event_log_data, self.request.retries))
         
         logger.info(f"Webhook sent to subscription {subscription_id}, status: {result['status_code']}")
         return result

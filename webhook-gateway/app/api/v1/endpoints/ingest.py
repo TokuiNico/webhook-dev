@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import AsyncSessionLocal
 from app.db.models import Source, Topic, EventLog, EventLogStatus
-from app.core.security import get_webhook_body_and_signature, verify_webhook_signature
+from app.core.security import get_webhook_body_and_signature, verify_webhook_signature, verify_stripe_signature
 from app.worker.tasks import dispatch_webhooks
 import logging
 import json
@@ -17,7 +17,7 @@ async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
 
-@router.post("/ingest/{source_name}/{topic_name}")
+@router.post("/{source_name}/{topic_name}")
 async def receive_webhook(
     source_name: str,
     topic_name: str,
@@ -67,19 +67,18 @@ async def receive_webhook(
         
         if source_name.lower() == "github" and signature_headers["github"]:
             signature_valid = verify_webhook_signature(
-                body, signature_headers["github"], source.secret, "sha256"
+                body, signature_headers["github"], str(source.secret), "sha256"
             )
             used_signature = signature_headers["github"]
         elif source_name.lower() == "stripe" and signature_headers["stripe"]:
             # For Stripe, we need special handling
-            from app.core.security import verify_stripe_signature
             signature_valid = verify_stripe_signature(
-                body, signature_headers["stripe"], source.secret
+                body, signature_headers["stripe"], str(source.secret)
             )
             used_signature = signature_headers["stripe"]
         elif signature_headers["generic"]:
             signature_valid = verify_webhook_signature(
-                body, signature_headers["generic"], source.secret, "sha256"
+                body, signature_headers["generic"], str(source.secret), "sha256"
             )
             used_signature = signature_headers["generic"]
         else:

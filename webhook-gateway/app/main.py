@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from app.db.base import Base
 from app.db.session import engine
-from app.api.v1.endpoints import ingest, subscriptions
+from app.api.v1 import api_router
 
 app = FastAPI(
     title="Webhook Gateway",
@@ -10,8 +10,7 @@ app = FastAPI(
 )
 
 # Include API routers
-app.include_router(ingest.router, prefix="/api/v1", tags=["webhooks"])
-app.include_router(subscriptions.router, prefix="/api/v1/subscriptions", tags=["subscriptions"])
+app.include_router(api_router, prefix="/api/v1")
 
 @app.on_event("startup")
 async def on_startup():

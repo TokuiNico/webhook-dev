@@ -1,11 +1,19 @@
-# 🧪 Webhook Gateway 快速測試指南
+# 🧪 Webhook Gateway 測試指南
 
-使用 SQLite + FakeRedis 進行簡單測試
+完整的系統測試和驗證指南
 
 ## 📋 前置需求
 
 - Python 3.11+
 - uv (Python 包管理器)
+
+## 🧪 測試腳本總覽
+
+### 主要測試腳本
+- `run_all_tests.py` - **完整測試套件** - 測試所有 API 端點和功能
+- `test_setup.py` - 初始化測試環境和數據
+- `test_webhook.py` - 測試 webhook 接收功能  
+- `test_subscriptions_api.py` - 測試訂閱管理 API
 
 ## 🚀 快速開始測試
 
@@ -46,12 +54,21 @@ uv run uvicorn app.main:app --reload
 uv run celery -A app.worker.celery_app worker --loglevel=info
 ```
 
-### 4. 測試功能
+### 4. 運行完整測試
 
-**使用測試腳本:**
+**推薦：使用完整測試套件**
 ```bash
-# 在第三個終端視窗中
+# 在第三個終端視窗中運行完整測試
+uv run python run_all_tests.py
+```
+
+**或使用個別測試腳本:**
+```bash
+# 測試 webhook 接收
 uv run python test_webhook.py
+
+# 測試訂閱管理 API
+uv run python test_subscriptions_api.py
 ```
 
 **手動測試:**
