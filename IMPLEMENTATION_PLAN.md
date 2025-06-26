@@ -2,6 +2,7 @@
 
 **Project:** Webhook Gateway Service
 **Stack:** Python, FastAPI, Pydantic, Celery, RabbitMQ, MySQL, uv, uvicorn
+**Note:** This plan is designed to handle multiple payload formats including JSON, XML, and x-www-form-urlencoded.
 
 ---
 
@@ -76,12 +77,13 @@ We will use SQLAlchemy as the ORM. The primary tables are:
     *   `is_active` (BOOLEAN)
     *   `created_at`, `updated_at`
 
-4.  **`event_logs`**: Logs every incoming event for traceability.
+4.  **`event_logs`**: Logs every incoming event for traceability. **(Modified for multi-format support)**
     *   `id` (PK)
     *   `topic_id` (FK to `topics.id`)
     *   `source_ip` (VARCHAR)
     *   `headers` (JSON)
-    *   `payload` (JSON)
+    *   `content_type` (VARCHAR): **New field to store the original Content-Type header.**
+    *   `payload` (LONGTEXT): **Changed from JSON to LONGTEXT to store the raw request body.**
     *   `status` (ENUM: "received", "queued", "failed_validation")
     *   `received_at`
 
@@ -105,16 +107,17 @@ We will use SQLAlchemy as the ORM. The primary tables are:
 
 ### b. Ingestion Endpoint (`app/api/v1/endpoints/ingest.py`)
 -   **Endpoint**: `POST /ingest/{source_name}/{topic_name}`
--   **Logic**:
-    1.  Accepts a raw HTTP `Request` object to access headers and body.
-    2.  Uses a dependency to verify the source and topic exist in the DB.
-    3.  Uses another dependency from `app/core/security.py` to perform HMAC signature validation using the stored secret.
-    4.  If validation is successful:
-        -   Logs the incoming event to the `event_logs` table with "received" status.
-        -   Creates a Celery task to handle the dispatch.
-        -   Sends the `event_log.id` to the Celery task.
+-   **Logic (Modified for multi-format support)**:
+    1.  Accepts a raw HTTP `Request` object to access headers and the raw body.
+    2.  Reads the raw request body using `await request.body()`.
+    3.  Reads the `Content-Type` header from `request.headers`.
+    4.  Uses a dependency to verify the source and topic exist in the DB.
+    5.  Uses another dependency from `app/core/security.py` to perform HMAC signature validation on the **raw request body**.
+    6.  If validation is successful:
+        -   Logs the incoming event to the `event_logs` table, storing the **raw payload**, **content_type**, and headers.
+        -   Creates a Celery task, sending the `event_log.id`.
         -   Returns an immediate `202 Accepted` response.
-    5.  If validation fails, logs the event with "failed_validation" status and returns a `403 Forbidden`.
+    7.  If validation fails, logs the event and returns a `403 Forbidden`.
 
 ### c. Subscription API (`app/api/v1/endpoints/subscriptions.py`)
 -   Standard CRUD operations for subscriptions.
@@ -127,28 +130,16 @@ We will use SQLAlchemy as the ORM. The primary tables are:
 -   **Task**: `dispatch_webhooks(event_log_id: int)`
 -   **Logic**:
     1.  Receives `event_log_id`.
-    2.  Retrieves the event details (payload, headers) and topic from the database.
-    3.  Finds all active subscriptions for that topic from the `subscriptions` table.
-    4.  For each subscription:
-        -   Launch a sub-task `send_to_subscriber(subscription_id, event_data)`.
--   **Sub-Task**: `send_to_subscriber(subscription_id: int, event_data: dict)`
--   **Logic**:
-    1.  Makes an HTTP POST request to the `target_url` of the subscription.
-    2.  **Retry Logic**: Uses Celery's built-in retry mechanism.
-        ```python
-        # In tasks.py
-        @celery_app.task(bind=True, max_retries=5, default_retry_delay=60) # Exponential backoff
-        def send_to_subscriber(self, subscription_id, event_data):
-            try:
-                # ... make HTTP request ...
-                if response.status_code >= 500:
-                    raise self.retry(exc=Exception("Service Unavailable"))
-            except Exception as exc:
-                # Log the failed attempt
-                raise self.retry(exc=exc)
-        ```
-    3.  **Dead-Letter Queue**: After max retries, Celery will automatically route the failed task to a dead-letter queue if configured in `celery_app.py`. This requires manual inspection.
-    4.  Logs the outcome of each attempt to the `dispatch_logs` table.
+    2.  Retrieves the full event log from the database, including the **raw payload** and **content_type**.
+    3.  Finds all active subscriptions for that topic.
+    4.  For each subscription, launch a sub-task `send_to_subscriber(subscription_id, event_log)`.
+-   **Sub-Task**: `send_to_subscriber(subscription_id: int, event_log: dict)`
+-   **Logic (Modified for multi-format support)**:
+    1.  Constructs an HTTP POST request to the `target_url`.
+    2.  **Crucially, sets the `Content-Type` header of the outgoing request to the `content_type` from the `event_log`.**
+    3.  **Uses the raw `payload` string from the `event_log` as the request body.**
+    4.  Implements retry logic using Celery's built-in mechanisms.
+    5.  Logs the outcome of each attempt to the `dispatch_logs` table.
 
 ## 4. Environment & Deployment (`docker-compose.yml`)
 
@@ -212,24 +203,24 @@ volumes:
 - [ ] Initialize project directory structure.
 - [ ] Create `pyproject.toml` and define dependencies.
 - [ ] Use `uv` to create a virtual environment and install dependencies (`uv venv` & `uv pip sync`).
-- [ ] **Dependencies**: `fastapi`, `uvicorn`, `pydantic`, `sqlalchemy`, `mysqlclient`, `celery`, `redis`, `alembic`.
+- [ ] **Dependencies**: `fastapi`, `uvicorn`, `pydantic`, `sqlalchemy`, `mysqlclient`, `celery`, `redis`, `alembic`, `python-multipart`, `lxml`.
 - [ ] Create `Dockerfile` and `docker-compose.yml`.
 - [ ] Implement Pydantic settings in `app/core/config.py`.
-- [ ] Define SQLAlchemy models in `app/db/models.py`.
+- [ ] **Define SQLAlchemy models in `app/db/models.py` (ensure `event_logs` has `content_type` and `payload` as LONGTEXT).**
 - [ ] Set up database session management (`app/db/session.py`) and initialize Alembic for migrations.
 
 ### Phase 2: Ingestion Logic
-- [ ] Implement the `POST /ingest/{source}/{topic}` endpoint.
-- [ ] Implement HMAC signature verification logic in `app/core/security.py`.
+- [ ] **Implement the `POST /ingest/{source}/{topic}` endpoint to handle raw bodies and content types.**
+- [ ] Implement HMAC signature verification logic in `app/core/security.py` to work with the raw body.
 - [ ] Create a FastAPI dependency to perform the verification.
-- [ ] Implement logging of incoming events to the `event_logs` table.
+- [ ] Implement logging of incoming events to the modified `event_logs` table.
 
 ### Phase 3: Background Worker & Dispatching
-- [ ] Configure Celery application in `app/worker/celery_app.py` to use RabbitMQ broker and a results backend.
+- [ ] Configure Celery application in `app/worker/celery_app.py`.
 - [ ] Create the `dispatch_webhooks` Celery task.
-- [ ] Create the `send_to_subscriber` sub-task with retry and error handling.
+- [ ] **Create the `send_to_subscriber` sub-task, ensuring it forwards the original `Content-Type` and raw payload.**
 - [ ] Implement logging to the `dispatch_logs` table from the Celery task.
-- [ ] Test the full flow: Ingestion -> Queuing -> Dispatching.
+- [ ] Test the full flow with JSON, form-data, and XML payloads.
 
 ### Phase 4: Management API
 - [ ] Implement CRUD endpoints for Subscriptions in `app/api/v1/endpoints/subscriptions.py`.
@@ -238,7 +229,7 @@ volumes:
 
 ### Phase 5: Testing & Documentation
 - [ ] Write unit tests for security functions and business logic.
-- [ ] Write integration tests for the API endpoints.
+- [ ] Write integration tests for the API endpoints with various content types.
 - [ ] Write integration tests for the Celery worker flow.
 - [ ] Document API endpoints using OpenAPI/Swagger (auto-generated by FastAPI).
 - [ ] Create a `README.md` with setup and usage instructions.
