@@ -1,0 +1,36 @@
+[project]
+name = "webhook-gateway"
+version = "0.1.0"
+description = "A robust webhook gateway to ingest, validate, and dispatch webhooks from various sources."
+authors = [{ name = "Your Name", email = "you@example.com" }]
+
+requires-python = ">=3.10"
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic",
+    "sqlalchemy",
+    "mysqlclient", # Driver for MySQL
+    "celery",
+    "redis",       # Recommended broker and result backend for Celery
+    "alembic",     # For database migrations
+    "python-multipart", # For handling form data
+    "lxml",        # For handling XML
+    "pydantic-settings", # For managing settings
+    "httpx"        # For making HTTP requests in the worker
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "black",
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 88
+
+[tool.black]
+line-length = 88
