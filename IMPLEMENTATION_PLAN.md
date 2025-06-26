@@ -1,7 +1,7 @@
 # Webhook Gateway: Implementation Plan & TODO
 
 **Project:** Webhook Gateway Service
-**Stack:** Python, FastAPI, Pydantic, Celery, RabbitMQ, MySQL
+**Stack:** Python, FastAPI, Pydantic, Celery, RabbitMQ, MySQL, uv, uvicorn
 
 ---
 
@@ -11,7 +11,7 @@
 webhook-gateway/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                 # FastAPI application entry point
+│   ├── main.py                 # FastAPI application entry point, run with uvicorn
 │   ├── api/
 │   │   ├── __init__.py
 │   │   ├── v1/
@@ -48,7 +48,7 @@ webhook-gateway/
 ├── .gitignore
 ├── docker-compose.yml          # Docker Compose for all services
 ├── Dockerfile                  # Dockerfile for the FastAPI/Celery app
-└── requirements.txt            # Python dependencies
+└── pyproject.toml              # Python project metadata and dependencies (for uv)
 ```
 
 ## 2. Database Schema (MySQL)
@@ -97,10 +97,11 @@ We will use SQLAlchemy as the ORM. The primary tables are:
 
 ## 3. Core Components Implementation
 
-### a. FastAPI Application (`app/main.py`)
+### a. FastAPI Application (`app/main.py` served by Uvicorn)
 -   Initializes the FastAPI app.
 -   Mounts the API routers from `app/api/v1/endpoints`.
 -   Handles application lifecycle events (startup/shutdown), like creating an initial DB connection pool.
+-   The application will be started using `uvicorn app.main:app`.
 
 ### b. Ingestion Endpoint (`app/api/v1/endpoints/ingest.py`)
 -   **Endpoint**: `POST /ingest/{source_name}/{topic_name}`
@@ -209,11 +210,13 @@ volumes:
 
 ### Phase 1: Core Setup & Database
 - [ ] Initialize project directory structure.
-- [ ] Set up `requirements.txt` (fastapi, uvicorn, pydantic, sqlalchemy, mysqlclient, celery, redis).
+- [ ] Create `pyproject.toml` and define dependencies.
+- [ ] Use `uv` to create a virtual environment and install dependencies (`uv venv` & `uv pip sync`).
+- [ ] **Dependencies**: `fastapi`, `uvicorn`, `pydantic`, `sqlalchemy`, `mysqlclient`, `celery`, `redis`, `alembic`.
 - [ ] Create `Dockerfile` and `docker-compose.yml`.
 - [ ] Implement Pydantic settings in `app/core/config.py`.
 - [ ] Define SQLAlchemy models in `app/db/models.py`.
-- [ ] Set up database session management (`app/db/session.py`) and Alembic for migrations.
+- [ ] Set up database session management (`app/db/session.py`) and initialize Alembic for migrations.
 
 ### Phase 2: Ingestion Logic
 - [ ] Implement the `POST /ingest/{source}/{topic}` endpoint.
