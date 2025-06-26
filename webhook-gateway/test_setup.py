@@ -26,15 +26,26 @@ async def insert_test_data():
     """插入測試資料"""
     print("📝 插入測試資料...")
     
-    async with AsyncSessionLocal() as session:
-        # 創建 GitHub 來源
-        github_source = Source(
-            name="github",
-            secret="github_test_secret_123"
-        )
-        session.add(github_source)
-        await session.commit()
-        await session.refresh(github_source)
+    session = AsyncSessionLocal()
+    try:
+        # 檢查並創建 GitHub 來源
+        from sqlalchemy import select
+        
+        # 檢查 GitHub 來源是否存在
+        result = await session.execute(select(Source).where(Source.name == "github"))
+        github_source = result.scalar_one_or_none()
+        
+        if not github_source:
+            github_source = Source(
+                name="github",
+                secret="github_test_secret_123"
+            )
+            session.add(github_source)
+            await session.commit()
+            await session.refresh(github_source)
+            print("✅ 創建 GitHub 來源")
+        else:
+            print("ℹ️ GitHub 來源已存在")
         
         # 創建 GitHub push 主題
         push_topic = Topic(

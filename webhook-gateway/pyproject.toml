@@ -21,6 +21,8 @@ dependencies = [
     "pydantic-settings", # For managing settings # For making HTTP requests in the worker
     "httpx",
     "aiosqlite>=0.21.0",
+    "requests>=2.32.4",
+    "chardet>=5.2.0",
 ]
 
 [project.optional-dependencies]

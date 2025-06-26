@@ -28,4 +28,7 @@ celery_app.conf.update(
     # Connection settings
     broker_connection_retry_on_startup=True,
     broker_connection_retry=True,
+    # Development settings - enable eager mode for testing
+    task_always_eager=settings.DEVELOPMENT and settings.USE_FAKE_REDIS,
+    task_eager_propagates=True,  # 讓異常在 eager mode 中正確傳播
 )

@@ -115,7 +115,7 @@ async def receive_webhook(
             event_log.status = EventLogStatus.QUEUED
             await db.commit()
             
-            # Dispatch to Celery for processing
+            # Dispatch to Celery for processing (uses eager mode in development)
             dispatch_webhooks.delay(event_log.id)
             
             return JSONResponse(
