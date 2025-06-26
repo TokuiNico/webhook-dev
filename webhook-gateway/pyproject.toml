@@ -14,6 +14,7 @@ dependencies = [
     "mysqlclient", # Driver for MySQL
     "celery",
     "redis", # Recommended broker and result backend for Celery
+    "fakeredis", # For development and testing without real Redis
     "alembic", # For database migrations
     "python-multipart", # For handling form data
     "lxml", # For handling XML
@@ -28,6 +29,7 @@ dev = [
     "pytest-cov",
     "black",
     "ruff",
+    "fakeredis", # Also include in dev dependencies
 ]
 
 [tool.ruff]
