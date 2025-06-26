@@ -1,5 +1,5 @@
 from pydantic import BaseModel, HttpUrl
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class SubscriptionBase(BaseModel):
@@ -23,3 +23,9 @@ class SubscriptionResponse(SubscriptionBase):
     
     class Config:
         from_attributes = True
+
+class SubscriptionList(BaseModel):
+    items: List[SubscriptionResponse]
+    total: int
+    skip: int
+    limit: int

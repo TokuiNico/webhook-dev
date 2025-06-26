@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     # Security settings
     SECRET_KEY: str = "your-secret-key-change-in-production"
     API_KEY: str = "your-api-key-for-management-endpoints"
+    MANAGEMENT_API_KEY: str = "your-management-api-key"
     
     # MySQL settings (for production)
     MYSQL_ROOT_PASSWORD: str = "rootpassword"
