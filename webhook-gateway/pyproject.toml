@@ -13,12 +13,13 @@ dependencies = [
     "sqlalchemy",
     "mysqlclient", # Driver for MySQL
     "celery",
-    "redis",       # Recommended broker and result backend for Celery
-    "alembic",     # For database migrations
+    "redis", # Recommended broker and result backend for Celery
+    "alembic", # For database migrations
     "python-multipart", # For handling form data
-    "lxml",        # For handling XML
-    "pydantic-settings", # For managing settings
-    "httpx"        # For making HTTP requests in the worker
+    "lxml", # For handling XML
+    "pydantic-settings", # For managing settings # For making HTTP requests in the worker
+    "httpx",
+    "aiosqlite>=0.21.0",
 ]
 
 [project.optional-dependencies]
