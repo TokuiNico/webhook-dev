@@ -30,6 +30,58 @@
 
 ## 4. 系統架構 (High-Level Architecture)
 
+```mermaid
+graph TD
+    subgraph "外部來源 (External Sources)"
+        A[來源 1: GitHub]
+        B[來源 2: Stripe]
+        C[來源 3: 內部應用]
+    end
+
+    subgraph "Webhook 閘道服務 (Webhook Gateway Service)"
+        Ingest[API 接收層]
+        Auth[安全與驗證中介軟體]
+        Router[路由器 & 主題對應]
+        Queue[(消息隊列 e.g., RabbitMQ)]
+        DLQ[(死信隊列)]
+    end
+
+    subgraph "內部消費者 (Internal Consumers)"
+        Dispatcher[分發工作程序]
+        SubA[訂閱服務 A]
+        SubB[訂閱服務 B]
+        SubC[訂閱服務 C]
+    end
+
+    subgraph "管理與狀態 (Management & State)"
+        Registry[訂閱註冊資料庫]
+        MgmtAPI[訂閱管理 API]
+    end
+
+    %% 資料流
+    A -- Webhook (github.push) --> Ingest
+    B -- Webhook (stripe.charge.succeeded) --> Ingest
+    C -- Webhook (custom.event) --> Ingest
+
+    Ingest -- "1. 驗證請求" --> Auth
+    Auth -- "2. 驗證通過/失敗" --> Ingest
+    Ingest -- "3. 路由 & 豐富化" --> Router
+    Router -- "4. 查詢訂閱者" --> Registry
+    Router -- "5. 為訂閱者加入隊列" --> Queue
+
+    Dispatcher -- "6. 從隊列取出訊息" --> Queue
+    Dispatcher -- "7. 分發到目標" --> SubA
+    Dispatcher -- "7. 分發到目標" --> SubB
+
+    %% 失敗分發流程
+    Dispatcher -- "投遞失敗後重試" --> Dispatcher
+    Dispatcher -- "N 次重試後" --> DLQ
+
+    %% 訂閱管理流程
+    SubC -- "subscribe(topic: 'github.push')" --> MgmtAPI
+    MgmtAPI -- "建立/刪除訂閱" --> Registry
+```
+
 系統主要由以下幾個部分組成：
 
 1.  **Ingestion API (接收層):**
