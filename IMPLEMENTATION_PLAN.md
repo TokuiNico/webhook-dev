@@ -200,9 +200,9 @@ volumes:
 ## 5. TODO List
 
 ### Phase 1: Core Setup & Database
-- [ ] Initialize project directory structure.
-- [ ] Create `pyproject.toml` and define dependencies.
-- [ ] Use `uv` to create a virtual environment and install dependencies (`uv venv` & `uv pip sync`).
+- [x] Initialize project directory structure.
+- [x] Create `pyproject.toml` and define dependencies.
+- [x] Use `uv` to create a virtual environment and install dependencies (`uv venv` & `uv pip sync`).
 - [ ] **Dependencies**: `fastapi`, `uvicorn`, `pydantic`, `sqlalchemy`, `mysqlclient`, `celery`, `redis`, `alembic`, `python-multipart`, `lxml`.
 - [ ] Create `Dockerfile` and `docker-compose.yml`.
 - [ ] Implement Pydantic settings in `app/core/config.py`.
