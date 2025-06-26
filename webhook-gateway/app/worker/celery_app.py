@@ -1,11 +1,12 @@
 from celery import Celery
 from app.core.config import settings
+from app.core.redis_client import get_redis_url
 
 # Create Celery app instance
 celery_app = Celery(
     "webhook_worker",
-    broker=settings.REDIS_URL,
-    backend=settings.REDIS_URL,
+    broker=get_redis_url(),
+    backend=get_redis_url(),
     include=["app.worker.tasks"]
 )
 
@@ -24,4 +25,7 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
     task_acks_late=True,
     worker_max_tasks_per_child=1000,
+    # Connection settings
+    broker_connection_retry_on_startup=True,
+    broker_connection_retry=True,
 )

@@ -206,13 +206,16 @@ volumes:
 - [x] Initialize project directory structure.
 - [x] Create `pyproject.toml` and define dependencies.
 - [x] Use `uv` to create a virtual environment and install dependencies (`uv venv` & `uv pip sync`).
-- [x] **Dependencies**: `fastapi`, `uvicorn`, `pydantic`, `sqlalchemy`, `mysqlclient`, `celery`, `redis`, `alembic`, `python-multipart`, `lxml`.
+- [x] **Dependencies**: `fastapi`, `uvicorn`, `pydantic`, `sqlalchemy`, `mysqlclient`, `celery`, `redis`, `alembic`, `python-multipart`, `lxml`, `fakeredis`.
 - [x] Create `Dockerfile` and `docker-compose.yml`.
 - [x] Implement Pydantic settings in `app/core/config.py`.
 - [x] **Define SQLAlchemy models in `app/db/models.py` (ensure `event_logs` has `content_type` and `payload` as LONGTEXT).**
 - [x] Set up database session management (`app/db/session.py`) and initialize Alembic for migrations.
 - [x] Configure Celery application in `app/worker/celery_app.py`.
 - [x] Create basic Celery tasks structure in `app/worker/tasks.py`.
+- [x] **Add fakeredis support for development environment.**
+- [x] **Create Redis client management module.**
+- [x] **Update docker-compose.yml with development and production profiles.**
 
 ### Phase 2: Ingestion Logic
 - [x] **Implement the `POST /ingest/{source}/{topic}` endpoint to handle raw bodies and content types.**

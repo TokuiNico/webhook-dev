@@ -18,6 +18,7 @@ services:
       timeout: 20s
       retries: 10
 
+  # Redis service (optional for development with fakeredis)
   redis:
     image: redis:7-alpine
     container_name: webhook_redis
@@ -31,10 +32,13 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    profiles:
+      - production  # Only start Redis in production profile
 
-  api:
+  # Development API (uses fakeredis)
+  api-dev:
     build: .
-    container_name: webhook_api
+    container_name: webhook_api_dev
     command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - .:/app
@@ -43,14 +47,63 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    environment:
+      - DATABASE_URL=mysql+aiomysql://${MYSQL_USER:-webhook_user}:${MYSQL_PASSWORD:-webhook_password}@db:3306/${MYSQL_DATABASE:-webhook_db}
+      - REDIS_URL=redis://localhost:6379/0
+      - DEVELOPMENT=true
+      - USE_FAKE_REDIS=true
+    env_file:
+      - .env
+    profiles:
+      - dev
+      - default
+
+  # Development Worker (uses fakeredis)
+  worker-dev:
+    build: .
+    container_name: webhook_worker_dev
+    command: uv run celery -A app.worker.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=mysql+aiomysql://${MYSQL_USER:-webhook_user}:${MYSQL_PASSWORD:-webhook_password}@db:3306/${MYSQL_DATABASE:-webhook_db}
+      - REDIS_URL=redis://localhost:6379/0
+      - DEVELOPMENT=true
+      - USE_FAKE_REDIS=true
+    env_file:
+      - .env
+    profiles:
+      - dev
+      - default
+
+  # Production API (uses real Redis)
+  api:
+    build: .
+    container_name: webhook_api
+    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - .:/app
+    ports:
+      - "8001:8000"
+    depends_on:
+      db:
+        condition: service_healthy
       redis:
         condition: service_healthy
     environment:
       - DATABASE_URL=mysql+aiomysql://${MYSQL_USER:-webhook_user}:${MYSQL_PASSWORD:-webhook_password}@db:3306/${MYSQL_DATABASE:-webhook_db}
       - REDIS_URL=redis://redis:6379/0
+      - DEVELOPMENT=false
+      - USE_FAKE_REDIS=false
     env_file:
       - .env
+    profiles:
+      - production
 
+  # Production Worker (uses real Redis)
   worker:
     build: .
     container_name: webhook_worker
@@ -65,8 +118,12 @@ services:
     environment:
       - DATABASE_URL=mysql+aiomysql://${MYSQL_USER:-webhook_user}:${MYSQL_PASSWORD:-webhook_password}@db:3306/${MYSQL_DATABASE:-webhook_db}
       - REDIS_URL=redis://redis:6379/0
+      - DEVELOPMENT=false
+      - USE_FAKE_REDIS=false
     env_file:
       - .env
+    profiles:
+      - production
 
 volumes:
   mysql_data:
