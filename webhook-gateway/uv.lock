@@ -369,6 +369,19 @@ wheels = [
 ]
 
 [[package]]
+name = "fast-depends"
+version = "2.4.12"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/85/f5/8b42b7588a67ad78991e5e7ca0e0c6a1ded535a69a725e4e48d3346a20c1/fast_depends-2.4.12.tar.gz", hash = "sha256:9393e6de827f7afa0141e54fa9553b737396aaf06bd0040e159d1f790487b16d", size = 16682, upload-time = "2024-10-16T17:44:35.963Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1d/08/4adb160d8394053289fdf3b276e93b53271fd463e54fff8911b23c1db4ed/fast_depends-2.4.12-py3-none-any.whl", hash = "sha256:9e5d110ddc962329e46c9b35e5fe65655984247a13ee3ca5a33186db7d2d75c2", size = 17651, upload-time = "2024-10-16T17:44:34.759Z" },
+]
+
+[[package]]
 name = "fastapi"
 version = "0.115.14"
 source = { registry = "https://pypi.org/simple" }
@@ -380,6 +393,25 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ca/53/8c38a874844a8b0fa10dd8adf3836ac154082cf88d3f22b544e9ceea0a15/fastapi-0.115.14.tar.gz", hash = "sha256:b1de15cdc1c499a4da47914db35d0e4ef8f1ce62b624e94e0e5824421df99739", size = 296263, upload-time = "2025-06-26T15:29:08.21Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/53/50/b1222562c6d270fea83e9c9075b8e8600b8479150a18e4516a6138b980d1/fastapi-0.115.14-py3-none-any.whl", hash = "sha256:6c0c8bf9420bd58f565e585036d971872472b4f7d3f6c73b698e10cffdefb3ca", size = 95514, upload-time = "2025-06-26T15:29:06.49Z" },
+]
+
+[[package]]
+name = "faststream"
+version = "0.5.43"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "fast-depends" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4e/a6/42a8e2ccc687b2f7d58b535104739b1a22f6595f95b5bc3ccda1fd748fb0/faststream-0.5.43.tar.gz", hash = "sha256:2ab8a55d7253adda81782ce67210cd1250052af5470dadc9acb45617a2ea5892", size = 299264, upload-time = "2025-06-15T20:52:05.388Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/21/e1b0e0b351e68b999e8b9ecaf4deb4b925a569f750c35fc6d5e09f01c2de/faststream-0.5.43-py3-none-any.whl", hash = "sha256:856f1c305417973739cc92fd2894645a5e3bbd9d9a44584f1255f39be23b0914", size = 400398, upload-time = "2025-06-15T20:52:03.543Z" },
+]
+
+[package.optional-dependencies]
+redis = [
+    { name = "redis" },
 ]
 
 [[package]]
@@ -1370,6 +1402,7 @@ dependencies = [
     { name = "chardet" },
     { name = "fakeredis" },
     { name = "fastapi" },
+    { name = "faststream", extra = ["redis"] },
     { name = "httpx" },
     { name = "lxml" },
     { name = "mysqlclient" },
@@ -1401,6 +1434,7 @@ requires-dist = [
     { name = "fakeredis" },
     { name = "fakeredis", marker = "extra == 'dev'" },
     { name = "fastapi" },
+    { name = "faststream", extras = ["redis"], specifier = ">=0.5.43" },
     { name = "httpx" },
     { name = "lxml" },
     { name = "mysqlclient" },

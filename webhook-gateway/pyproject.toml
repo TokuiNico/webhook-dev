@@ -23,6 +23,7 @@ dependencies = [
     "aiosqlite>=0.21.0",
     "requests>=2.32.4",
     "chardet>=5.2.0",
+    "faststream[redis]>=0.5.43",
 ]
 
 [project.optional-dependencies]
