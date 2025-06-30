@@ -42,23 +42,18 @@ uv run python test_setup.py
 
 ### 3. 啟動服務
 
-開啟 **兩個終端視窗**：
-
-**終端 1 - API 服務:**
+**單一終端啟動:**
 ```bash
 uv run uvicorn app.main:app --reload
 ```
 
-**終端 2 - Celery Worker:**
-```bash  
-uv run celery -A app.worker.celery_app worker --loglevel=info
-```
+**注意**: FastStream 處理器已整合到主應用程式中，無需額外啟動 worker 服務。
 
 ### 4. 運行完整測試
 
 **推薦：使用完整測試套件**
 ```bash
-# 在第三個終端視窗中運行完整測試
+# 在新的終端視窗中運行完整測試
 uv run python run_all_tests.py
 ```
 
@@ -86,23 +81,18 @@ curl -X POST http://localhost:8000/api/v1/ingest/github/push \
 
 ### 成功的測試應該顯示：
 
-1. **API 服務啟動:**
+1. **API 服務啟動 (包含 FastStream):**
    ```
    INFO:     Uvicorn running on http://127.0.0.1:8000
+   INFO:     FastStream broker started
    ```
 
-2. **Celery Worker 啟動:**
-   ```
-   [INFO/MainProcess] Connected to redis://localhost:6379/0
-   [INFO/MainProcess] Ready to process tasks
-   ```
-
-3. **健康檢查回應:**
+2. **健康檢查回應:**
    ```json
    {"status": "healthy", "service": "webhook-gateway"}
    ```
 
-4. **Webhook 接收成功:**
+3. **Webhook 接收成功:**
    ```json
    {"message": "Webhook received and queued for processing"}
    ```
@@ -138,7 +128,7 @@ SELECT * FROM event_logs;
 uv pip install fakeredis requests
 ```
 
-### 問題：Celery 連接錯誤
+### 問題：FastStream 連接錯誤
 **解決方案:** 檢查是否已設定環境變數
 ```bash
 export USE_FAKE_REDIS=true
@@ -155,13 +145,14 @@ export DEVELOPMENT=true
 
 成功完成基本測試後，您可以：
 1. 實現完整的資料庫操作邏輯
-2. 完善 Celery 任務處理
-3. 添加訂閱管理 API
+2. 完善 FastStream 事件處理邏輯
+3. 添加更多訂閱管理 API 功能
 4. 撰寫單元測試
 
 ## 💡 開發提示
 
 - 使用 `--reload` 參數啟動 API 服務可以自動重載程式碼變更
-- Celery Worker 日誌會顯示任務處理狀態
+- FastStream 事件處理日誌會在主應用程式中顯示
 - SQLite 檔案在專案目錄中，可以隨時刪除重新創建
-- FakeRedis 在記憶體中運行，重啟服務會清空所有隊列資料 
+- FakeRedis 在記憶體中運行，重啟服務會清空所有隊列資料
+- 所有事件處理都在同一個進程中完成，簡化了開發和調試過程 

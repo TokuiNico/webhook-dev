@@ -1,8 +1,9 @@
 # Webhook Gateway: Implementation Plan & TODO
 
 **Project:** Webhook Gateway Service
-**Stack:** Python, FastAPI, Pydantic, Celery, Redis, MySQL, uv, uvicorn
+**Stack:** Python, FastAPI, Pydantic, FastStream, Redis, SQLite/MySQL, uv, uvicorn
 **Note:** This plan is designed to handle multiple payload formats including JSON, XML, and x-www-form-urlencoded.
+**Architecture:** Uses FastStream for event processing (replaces Celery), SQLite for development, MySQL for production.
 
 ---
 
@@ -35,10 +36,15 @@ webhook-gateway/
 │   │   ├── __init__.py
 │   │   ├── subscription.py       # Pydantic schemas for subscriptions
 │   │   └── topic.py              # Pydantic schemas for topics
-│   └── worker/
+│   ├── stream/
+│   │   ├── __init__.py
+│   │   ├── app.py                # FastStream application instance
+│   │   ├── handlers.py           # FastStream event handlers
+│   │   └── models.py             # FastStream event models
+│   └── worker/                   # [DEPRECATED] Old Celery implementation
 │       ├── __init__.py
-│       ├── celery_app.py         # Celery application instance
-│       └── tasks.py              # Celery task definitions (e.g., dispatching)
+│       ├── celery_app.py         # [DEPRECATED] Use FastStream instead
+│       └── tasks.py              # [DEPRECATED] Use FastStream handlers instead
 │
 ├── tests/                      # Unit and integration tests
 │   ├── __init__.py
@@ -48,13 +54,17 @@ webhook-gateway/
 ├── .env                        # Environment variables (for local development)
 ├── .gitignore
 ├── docker-compose.yml          # Docker Compose for all services
-├── Dockerfile                  # Dockerfile for the FastAPI/Celery app
+├── Dockerfile                  # Dockerfile for the FastAPI/FastStream app
 └── pyproject.toml              # Python project metadata and dependencies (for uv)
 ```
 
-## 2. Database Schema (MySQL)
+## 2. Database Schema
 
-We will use SQLAlchemy as the ORM. The primary tables are:
+We use SQLAlchemy as the ORM with different databases for different environments:
+- **Development**: SQLite (`sqlite+aiosqlite:///./webhook.db`)
+- **Production**: MySQL 8.0+
+
+The primary tables are:
 
 1.  **`sources`**: Stores information about trusted webhook sources and their secrets for verification.
     *   `id` (PK)
@@ -100,9 +110,11 @@ We will use SQLAlchemy as the ORM. The primary tables are:
 ## 3. Core Components Implementation
 
 ### a. FastAPI Application (`app/main.py` served by Uvicorn)
--   Initializes the FastAPI app.
+-   Initializes the FastAPI app with lifespan management.
 -   Mounts the API routers from `app/api/v1/endpoints`.
--   Handles application lifecycle events (startup/shutdown), like creating an initial DB connection pool.
+-   Handles application lifecycle events (startup/shutdown):
+    - Creates database tables automatically
+    - Starts and stops FastStream broker
 -   The application will be started using `uvicorn app.main:app`.
 
 ### b. Ingestion Endpoint (`app/api/v1/endpoints/ingest.py`)
@@ -115,7 +127,7 @@ We will use SQLAlchemy as the ORM. The primary tables are:
     5.  Uses another dependency from `app/core/security.py` to perform HMAC signature validation on the **raw request body**.
     6.  If validation is successful:
         -   Logs the incoming event to the `event_logs` table, storing the **raw payload**, **content_type**, and headers.
-        -   Creates a Celery task, sending the `event_log.id`.
+        -   Publishes a FastStream event with the event data and subscriptions.
         -   Returns an immediate `202 Accepted` response.
     7.  If validation fails, logs the event and returns a `403 Forbidden`.
 
@@ -126,20 +138,20 @@ We will use SQLAlchemy as the ORM. The primary tables are:
 -   `DELETE /subscriptions/{sub_id}`: Deactivates a subscription.
 -   All endpoints should be protected by an internal API key.
 
-### d. Celery Worker (`app/worker/tasks.py`)
--   **Task**: `dispatch_webhooks(event_log_id: int)`
+### d. FastStream Handlers (`app/stream/handlers.py`)
+-   **Handler**: `@broker.subscriber("webhook.received")`
 -   **Logic**:
-    1.  Receives `event_log_id`.
-    2.  Retrieves the full event log from the database, including the **raw payload** and **content_type**.
-    3.  Finds all active subscriptions for that topic.
-    4.  For each subscription, launch a sub-task `send_to_subscriber(subscription_id, event_log)`.
--   **Sub-Task**: `send_to_subscriber(subscription_id: int, event_log: dict)`
+    1.  Receives a `WebhookEvent` containing event data and subscriptions.
+    2.  For each active subscription, publishes a dispatch task to `webhook.dispatch` queue.
+    3.  Logs the queuing of dispatch tasks.
+-   **Handler**: `@broker.subscriber("webhook.dispatch")`
 -   **Logic (Modified for multi-format support)**:
-    1.  Constructs an HTTP POST request to the `target_url`.
-    2.  **Crucially, sets the `Content-Type` header of the outgoing request to the `content_type` from the `event_log`.**
-    3.  **Uses the raw `payload` string from the `event_log` as the request body.**
-    4.  Implements retry logic using Celery's built-in mechanisms.
-    5.  Logs the outcome of each attempt to the `dispatch_logs` table.
+    1.  Receives event and subscription data.
+    2.  Constructs an HTTP POST request to the `target_url`.
+    3.  **Crucially, sets the `Content-Type` header of the outgoing request to the `content_type` from the event.**
+    4.  **Uses the raw `payload` string from the event as the request body.**
+    5.  Implements error handling and timeout management.
+    6.  Logs the outcome of each attempt to the `dispatch_logs` table.
 
 ## 4. Environment & Deployment (`docker-compose.yml`)
 
@@ -183,17 +195,8 @@ services:
     env_file:
       - .env
 
-  worker:
-    build: .
-    container_name: webhook_worker
-    command: celery -A app.worker.celery_app worker --loglevel=info
-    volumes:
-      - .:/app
-    depends_on:
-      - db
-      - redis
-    env_file:
-      - .env
+  # FastStream handlers run within the API process
+  # No separate worker needed
 
 volumes:
   mysql_data:

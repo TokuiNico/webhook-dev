@@ -16,7 +16,7 @@
 所有管理 API 端點都需要 Bearer Token 認證：
 
 ```bash
-Authorization: Bearer webhook-admin-key-123
+Authorization: Bearer your-api-key-for-management-endpoints
 ```
 
 **認證錯誤回應：**
@@ -301,14 +301,14 @@ curl -X POST \
 ```bash
 # 創建 GitHub 來源
 curl -X POST \
-  -H "Authorization: Bearer webhook-admin-key-123" \
+  -H "Authorization: Bearer your-api-key-for-management-endpoints" \
   -H "Content-Type: application/json" \
   -d '{"name": "github", "secret": "github_webhook_secret"}' \
   http://127.0.0.1:8000/api/v1/manage/sources/
 
 # 創建 push 主題
 curl -X POST \
-  -H "Authorization: Bearer webhook-admin-key-123" \
+  -H "Authorization: Bearer your-api-key-for-management-endpoints" \
   -H "Content-Type: application/json" \
   -d '{"name": "push", "source_id": 1, "description": "Git push events"}' \
   http://127.0.0.1:8000/api/v1/manage/topics/
@@ -318,7 +318,7 @@ curl -X POST \
 
 ```bash
 curl -X POST \
-  -H "Authorization: Bearer webhook-admin-key-123" \
+  -H "Authorization: Bearer your-api-key-for-management-endpoints" \
   -H "Content-Type: application/json" \
   -d '{
     "topic_id": 1,
@@ -343,11 +343,11 @@ curl -X POST \
 
 ```bash
 # 總覽統計
-curl -H "Authorization: Bearer webhook-admin-key-123" \
+curl -H "Authorization: Bearer your-api-key-for-management-endpoints" \
   http://127.0.0.1:8000/api/v1/stats/overview
 
 # 活動統計
-curl -H "Authorization: Bearer webhook-admin-key-123" \
+curl -H "Authorization: Bearer your-api-key-for-management-endpoints" \
   http://127.0.0.1:8000/api/v1/stats/activity?days=30
 ```
 
