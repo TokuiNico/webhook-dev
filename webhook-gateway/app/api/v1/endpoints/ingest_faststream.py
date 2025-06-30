@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import AsyncSessionLocal
-from app.db.models import Source, Topic, EventLog, EventLogStatus
+from app.db.models import Source, Topic, EventLog, EventLogStatus, Subscription
 from app.core.security import get_webhook_body_and_signature, verify_webhook_signature, verify_stripe_signature
 from app.stream.app import broker
 from app.stream.models import WebhookEvent, SubscriptionInfo
@@ -26,7 +26,7 @@ async def receive_webhook(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Receive and process incoming webhooks.
+    Receive and process incoming webhooks using FastStream.
     
     Args:
         source_name: Name of the webhook source (e.g., 'github', 'stripe')
@@ -72,7 +72,6 @@ async def receive_webhook(
             )
             used_signature = signature_headers["github"]
         elif source_name.lower() == "stripe" and signature_headers["stripe"]:
-            # For Stripe, we need special handling
             signature_valid = verify_stripe_signature(
                 body, signature_headers["stripe"], str(source.secret)
             )
@@ -84,8 +83,6 @@ async def receive_webhook(
             used_signature = signature_headers["generic"]
         else:
             logger.warning(f"No signature found for source: {source_name}")
-            # For development, we might want to allow unsigned webhooks
-            # In production, this should be False
             signature_valid = False
         
         # Get client IP
@@ -115,8 +112,7 @@ async def receive_webhook(
             event_log.status = EventLogStatus.QUEUED
             await db.commit()
             
-            # 獲取所有活躍的訂閱
-            from sqlalchemy import select
+            # Get all active subscriptions for the topic
             subscriptions_result = await db.execute(
                 select(Subscription).where(
                     Subscription.topic_id == topic.id,
@@ -125,7 +121,7 @@ async def receive_webhook(
             )
             subscriptions = subscriptions_result.scalars().all()
             
-            # 創建 FastStream 事件
+            # Create FastStream event
             webhook_event = WebhookEvent(
                 event_log_id=event_log.id,
                 topic_id=topic.id,
@@ -146,7 +142,7 @@ async def receive_webhook(
                 received_at=event_log.received_at
             )
             
-            # 發布事件到 FastStream
+            # Publish event to FastStream
             await broker.publish(webhook_event, "webhook.received")
             
             return JSONResponse(
@@ -172,4 +168,4 @@ async def receive_webhook(
 @router.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "service": "webhook-gateway"}
+    return {"status": "healthy", "service": "webhook-gateway"} 
