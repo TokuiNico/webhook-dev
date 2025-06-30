@@ -256,6 +256,163 @@ volumes:
 - [x] **Implement complete testing suite with multiple scenarios.**
 - [x] **Test authentication and authorization mechanisms.**
 
+### Phase 6: Production Enhancement (高優先級改進)
+#### **A. 重試機制增強** ✅
+- [x] Create `app/stream/retry_handler.py` module
+- [x] Implement exponential backoff retry logic (1s, 2s, 4s, 8s, 16s)
+- [x] Add configurable maximum retry attempts
+- [x] Implement failure callbacks and logging
+- [x] Add FastStream event processing support
+- [x] Create utility functions for different retry strategies
+- [x] Add proper error handling and timeout management
+
+#### **B. 安全中間件系統** ✅
+- [x] Create `app/middleware/security.py` module
+- [x] Implement IP whitelist filtering mechanism
+- [x] Add rate limiting to prevent DDoS attacks
+- [x] Implement replay attack protection (timestamp-based validation)
+- [x] Add request size limits
+- [x] Create environment variable configuration for security rules
+- [x] Add middleware integration with FastAPI
+- [x] Implement security logging and monitoring
+
+#### **C. 監控和指標收集** ✅
+- [x] Create `app/monitoring/metrics.py` module
+- [x] Implement Prometheus metrics collection
+- [x] Add custom metrics (request count, response time, error rate)
+- [x] Enhance health check endpoints
+- [x] Add performance monitoring capabilities
+- [x] Create alerting mechanisms
+- [ ] Add `prometheus_client` dependency to `pyproject.toml`
+- [ ] Integrate metrics collection with main application
+- [ ] Create Grafana dashboard configuration (optional)
+
+### Phase 7: Advanced Features (中優先級改進)
+#### **D. Webhook 測試工具**
+- [ ] Create `app/api/v1/endpoints/testing.py` module
+- [ ] Implement `POST /api/v1/test/webhook/{subscription_id}` endpoint
+  - [ ] Test specific subscription endpoints
+  - [ ] Validate endpoint reachability
+  - [ ] Check response status and content
+  - [ ] Generate test reports
+- [ ] Implement `POST /api/v1/test/payload/` endpoint
+  - [ ] Accept custom payload testing
+  - [ ] Support multiple content types (JSON, XML, Form-data)
+  - [ ] Validate payload format
+  - [ ] Provide format conversion suggestions
+- [ ] Implement `GET /api/v1/test/history/` endpoint
+  - [ ] Store test execution history
+  - [ ] Provide test result analytics
+  - [ ] Filter and search test results
+- [ ] Create Pydantic schemas for testing APIs
+- [ ] Add comprehensive error handling and validation
+- [ ] Write unit tests for testing functionality
+- [ ] Update API documentation with testing endpoints
+
+#### **E. 批量操作 API**
+- [ ] Create `app/api/v1/endpoints/bulk.py` module
+- [ ] Implement `POST /api/v1/bulk/subscriptions/enable` endpoint
+  - [ ] Support condition-based bulk enable
+  - [ ] Add batch size limitations
+  - [ ] Implement operation progress tracking
+  - [ ] Provide rollback mechanism
+- [ ] Implement `POST /api/v1/bulk/subscriptions/disable` endpoint
+  - [ ] Support bulk disable with conditions
+  - [ ] Add safety confirmations
+  - [ ] Log all bulk operations
+- [ ] Implement `POST /api/v1/bulk/subscriptions/delete` endpoint
+  - [ ] Add strict authorization checks
+  - [ ] Implement soft delete option
+  - [ ] Provide operation audit trail
+- [ ] Implement `POST /api/v1/bulk/events/replay` endpoint
+  - [ ] Support date range filtering
+  - [ ] Add event selection criteria
+  - [ ] Implement replay rate limiting
+  - [ ] Provide replay status tracking
+- [ ] Create bulk operation schemas and validation
+- [ ] Add comprehensive error handling
+- [ ] Implement operation queuing for large batches
+- [ ] Write integration tests for bulk operations
+
+#### **F. 事件過濾和轉換**
+- [ ] Create `app/core/filters.py` module
+- [ ] Implement JSONPath filtering engine
+  - [ ] Add JSONPath expression parser
+  - [ ] Support complex filtering conditions
+  - [ ] Implement filter validation
+- [ ] Create payload transformation system
+  - [ ] Add JSON ↔ XML conversion
+  - [ ] Add JSON ↔ Form-data conversion
+  - [ ] Support custom transformation rules
+  - [ ] Implement transformation validation
+- [ ] Implement conditional dispatch logic
+  - [ ] Add rule-based routing
+  - [ ] Support content-based filtering
+  - [ ] Implement priority-based dispatch
+- [ ] Create custom header manipulation
+  - [ ] Add header addition/modification rules
+  - [ ] Support dynamic header values
+  - [ ] Implement header validation
+- [ ] Add filter and transformation configuration to subscriptions
+- [ ] Create admin API for filter management
+- [ ] Write comprehensive tests for filtering logic
+- [ ] Update documentation with filtering examples
+
+### Phase 8: Performance & Operations (低優先級改進)
+#### **G. 性能優化**
+- [ ] Database connection pool optimization
+  - [ ] Configure SQLAlchemy connection pooling
+  - [ ] Add connection health checks
+  - [ ] Implement connection pool monitoring
+- [ ] Redis caching layer implementation
+  - [ ] Cache frequently accessed data
+  - [ ] Implement cache invalidation strategies
+  - [ ] Add cache hit/miss metrics
+- [ ] Batch processing optimization
+  - [ ] Implement bulk event log insertion
+  - [ ] Add batch dispatch processing
+  - [ ] Optimize database I/O operations
+- [ ] Large payload compression
+  - [ ] Add gzip compression for storage
+  - [ ] Implement compression threshold configuration
+  - [ ] Add decompression handling
+
+#### **H. 運維功能**
+- [ ] Automated backup and recovery
+  - [ ] Implement database backup strategies
+  - [ ] Add backup scheduling
+  - [ ] Create restore procedures
+- [ ] Structured logging and rotation
+  - [ ] Implement structured JSON logging
+  - [ ] Add log rotation policies
+  - [ ] Create log aggregation setup
+- [ ] Resource monitoring
+  - [ ] Add CPU, memory, disk usage monitoring
+  - [ ] Implement resource alerting
+  - [ ] Create resource usage dashboards
+- [ ] Alert notification system
+  - [ ] Add email notification support
+  - [ ] Implement Slack integration
+  - [ ] Create customizable alert rules
+
+#### **I. 配置管理界面**
+- [ ] Dynamic configuration system
+  - [ ] Implement hot configuration reloading
+  - [ ] Add configuration validation
+  - [ ] Create configuration version control
+- [ ] A/B testing framework
+  - [ ] Implement traffic splitting
+  - [ ] Add A/B test management
+  - [ ] Create test result analytics
+- [ ] Visual rule engine
+  - [ ] Create drag-and-drop rule builder
+  - [ ] Add rule validation and testing
+  - [ ] Implement rule export/import
+- [ ] Configuration template system
+  - [ ] Create common configuration templates
+  - [ ] Add template sharing and versioning
+  - [ ] Implement template validation
+
 ---
 
 ## 6. **🎯 專案狀態總結 (2024-12-19 更新)**
@@ -326,7 +483,126 @@ volumes:
 
 ---
 
-## 7. Frontend Implementation Plan
+## 7. Production Readiness & Advanced Features
+
+### **🔧 高優先級改進 (已完成)**
+
+#### **A. 重試機制增強** ✅
+- **文件**: `app/stream/retry_handler.py`
+- **功能**: 
+  - 指數退避重試邏輯 (1s, 2s, 4s, 8s, 16s)
+  - 可配置的最大重試次數
+  - 失敗回調和日誌記錄
+  - 支援 FastStream 事件處理
+- **用途**: 處理臨時網路問題和目標服務暫時不可用
+
+#### **B. 安全中間件系統** ✅  
+- **文件**: `app/middleware/security.py`
+- **功能**:
+  - IP 白名單過濾
+  - 速率限制 (防止 DDoS)
+  - 重放攻擊防護 (基於時間戳驗證)
+  - 請求大小限制
+- **配置**: 通過環境變數靈活配置安全規則
+
+#### **C. 監控和指標收集** ✅
+- **文件**: `app/monitoring/metrics.py`  
+- **功能**:
+  - Prometheus 指標收集
+  - 自定義指標 (請求計數、響應時間、錯誤率)
+  - 健康檢查端點增強
+  - 性能監控和警報
+- **依賴**: 需要添加 `prometheus_client` 到 `pyproject.toml`
+
+### **🚀 中優先級改進建議**
+
+#### **D. Webhook 測試工具**
+- **目標**: 提供內建的 webhook 測試功能
+- **實現**:
+  ```python
+  # app/api/v1/endpoints/testing.py
+  POST /api/v1/test/webhook/{subscription_id}  # 測試特定訂閱
+  POST /api/v1/test/payload/                   # 測試自定義 payload
+  GET  /api/v1/test/history/                   # 測試歷史記錄
+  ```
+- **功能**:
+  - 發送測試 webhook 到訂閱端點
+  - 驗證端點可達性和響應
+  - 載荷格式驗證 (JSON, XML, Form-data)
+  - 測試報告和建議
+
+#### **E. 批量操作 API**
+- **目標**: 支援批量管理訂閱和事件
+- **實現**:
+  ```python
+  # app/api/v1/endpoints/bulk.py  
+  POST /api/v1/bulk/subscriptions/enable       # 批量啟用
+  POST /api/v1/bulk/subscriptions/disable      # 批量停用  
+  POST /api/v1/bulk/subscriptions/delete       # 批量刪除
+  POST /api/v1/bulk/events/replay              # 批量重播事件
+  ```
+- **功能**:
+  - 基於條件的批量操作 (主題、來源、日期範圍)
+  - 操作進度追蹤
+  - 回滾機制
+
+#### **F. 事件過濾和轉換**
+- **目標**: 允許在分發前過濾和轉換事件
+- **實現**:
+  ```python
+  # app/core/filters.py
+  - JSONPath 過濾器
+  - 自定義轉換規則
+  - 條件式分發邏輯
+  ```
+- **功能**:
+  - 基於載荷內容的條件過濾
+  - 載荷格式轉換 (JSON ↔ XML ↔ Form)
+  - 自定義 header 添加和修改
+
+### **📊 低優先級改進建議**
+
+#### **G. 性能優化**
+- **資料庫連接池**: 優化 SQLAlchemy 連接管理
+- **快取層**: Redis 快取熱門查詢和統計資料
+- **批量處理**: 批量插入事件日誌，減少資料庫 I/O
+- **壓縮**: 大型載荷的 gzip 壓縮存儲
+
+#### **H. 運維功能**
+- **備份和恢復**: 自動化資料庫備份策略
+- **日誌輪轉**: 結構化日誌和輪轉策略
+- **資源監控**: CPU、記憶體、磁碟使用監控
+- **告警系統**: 異常事件的電子郵件/Slack 通知
+
+#### **I. 配置管理界面**
+- **動態配置**: 無需重啟的配置熱更新
+- **A/B 測試**: 流量分割和 A/B 測試支援
+- **規則引擎**: 視覺化的業務規則配置
+- **範本系統**: 常用配置的範本化管理
+
+### **📋 實施優先順序建議**
+
+1. **立即實施** (已完成):
+   - ✅ 重試機制 (`retry_handler.py`)
+   - ✅ 安全中間件 (`security.py`) 
+   - ✅ 監控指標 (`metrics.py`)
+
+2. **短期目標** (1-2 週):
+   - 🎯 Webhook 測試工具
+   - 🎯 添加 `prometheus_client` 依賴
+   - 🎯 批量操作 API
+
+3. **中期目標** (1 個月):
+   - 🎯 事件過濾和轉換
+   - 🎯 性能優化
+
+4. **長期目標** (3 個月):
+   - 🎯 完整運維功能
+   - 🎯 配置管理界面
+
+---
+
+## 8. Frontend Implementation Plan
 
 **Framework:** React 18 + TypeScript + Vite
 **UI Library:** Ant Design 5
