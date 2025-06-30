@@ -1,0 +1,57 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Coding Standards and Best Practices
+
+## API Development Rules
+- All FastAPI routes must be async functions
+- Use type hints for all function parameters and return values
+- Import dependencies: `from fastapi import APIRouter, Depends, HTTPException`
+- Use Pydantic models for request/response validation
+- Return JSONResponse with appropriate HTTP status codes
+
+## Database Operations
+- Always use async database operations with `await`
+- Import async session: `from app.db.session import AsyncSessionLocal`
+- Use dependency injection for database sessions:
+  ```python
+  async def get_db():
+      async with AsyncSessionLocal() as session:
+          yield session
+  ```
+- Handle database exceptions with try/catch and return appropriate HTTP errors
+
+## FastStream Event Handlers
+- Import broker: `from app.stream.app import broker`
+- Use descriptive queue names: `webhook.received`, `webhook.dispatch`
+- Event handlers should be async and handle exceptions gracefully
+- Log important events with the logger: `import logging; logger = logging.getLogger(__name__)`
+
+## Security Implementation
+- Import security functions: `from app.core.security import verify_webhook_signature`
+- Always verify HMAC signatures for incoming webhooks
+- Use Bearer token authentication for management APIs
+- Validate all input data with Pydantic schemas
+
+## Error Handling Patterns
+- Use HTTPException for API errors: `raise HTTPException(status_code=404, detail="Not found")`
+- Log errors before raising exceptions
+- Provide meaningful error messages to clients
+- Use appropriate HTTP status codes (200, 201, 202, 400, 401, 403, 404, 500)
+
+## Import Organization
+```python
+# Standard library imports first
+import logging
+from datetime import datetime
+
+# Third-party imports
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+# Local application imports
+from app.db.session import AsyncSessionLocal
+from app.stream.app import broker
+```

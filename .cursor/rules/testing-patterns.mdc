@@ -1,0 +1,56 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Testing and Development Patterns
+
+## Test Environment Setup
+- Run [webhook-gateway/test_setup.py](mdc:webhook-gateway/test_setup.py) before testing
+- Use SQLite database: [webhook-gateway/webhook.db](mdc:webhook-gateway/webhook.db)
+- Enable FakeRedis with `USE_FAKE_REDIS=true` in environment
+- Test APIs use `API_KEY="webhook-admin-key-123"` for consistency
+
+## Development Server Commands
+```bash
+# Start development server
+uv run uvicorn app.main:app --reload
+
+# Run complete test suite
+uv run python run_all_tests.py
+
+# Initialize test data
+uv run python test_setup.py
+```
+
+## Environment Variables for Development
+```env
+DEVELOPMENT=true
+USE_SQLITE=true
+USE_FAKE_REDIS=true
+DATABASE_URL=sqlite+aiosqlite:///./webhook.db
+API_KEY=your-api-key-for-management-endpoints
+```
+
+## Testing Rules
+- Test files use specific API keys for consistency
+- All tests should work with SQLite + FakeRedis
+- Use [webhook-gateway/debug_webhook.py](mdc:webhook-gateway/debug_webhook.py) for webhook debugging
+- Health check endpoint: `GET /health` (no auth required)
+
+## FastStream Testing
+- FastStream handlers run in the same process as FastAPI
+- No need to start separate worker processes
+- All event processing logs appear in main application logs
+- Use fakeredis for message queue in development
+
+## Docker Testing
+- Development profile: `docker-compose --profile dev up -d`
+- Production profile: `docker-compose --profile production up -d`
+- Check logs: `docker-compose logs -f api-dev`
+
+## Common Test Scenarios
+1. Health check: `curl http://localhost:8000/health`
+2. Webhook ingestion: `POST /api/v1/ingest/{source}/{topic}`
+3. Subscription management: CRUD operations with Bearer auth
+4. Statistics endpoints: Various metrics with authentication

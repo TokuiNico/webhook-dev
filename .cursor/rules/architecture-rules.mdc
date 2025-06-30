@@ -1,0 +1,41 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Webhook Gateway Architecture Rules
+
+## CRITICAL: Technology Stack Constraints
+- Always use FastStream, never suggest or implement Celery
+- Use async/await for all database operations and API endpoints
+- Development uses SQLite + FakeRedis, production uses MySQL + Redis
+- All new code must use uv for dependency management
+
+## File Organization Rules
+- API endpoints: place in [webhook-gateway/app/api/v1/endpoints/](mdc:webhook-gateway/app/api/v1/endpoints/)
+- Database models: modify [webhook-gateway/app/db/models.py](mdc:webhook-gateway/app/db/models.py)
+- Event handlers: add to [webhook-gateway/app/stream/handlers.py](mdc:webhook-gateway/app/stream/handlers.py)
+- Configuration: update [webhook-gateway/app/core/config.py](mdc:webhook-gateway/app/core/config.py)
+
+## DEPRECATED - Do Not Use
+- Never modify files in [webhook-gateway/app/worker/](mdc:webhook-gateway/app/worker/) (Celery legacy)
+- Never use [webhook-gateway/app/api/v1/endpoints/ingest.py](mdc:webhook-gateway/app/api/v1/endpoints/ingest.py)
+- Always use [webhook-gateway/app/api/v1/endpoints/ingest_faststream.py](mdc:webhook-gateway/app/api/v1/endpoints/ingest_faststream.py) for webhook ingestion
+
+## FastStream Event Pattern
+When implementing webhook processing:
+1. Use `@broker.subscriber("queue.name")` decorators
+2. Publish events with `await broker.publish(data, "queue.name")`
+3. All handlers run in the same process as FastAPI
+4. Import broker from [webhook-gateway/app/stream/app.py](mdc:webhook-gateway/app/stream/app.py)
+
+## Database Rules
+- Always use async SQLAlchemy sessions
+- Import session from [webhook-gateway/app/db/session.py](mdc:webhook-gateway/app/db/session.py)
+- Use soft deletes for subscriptions (set `is_active=False`)
+- Store raw webhook payloads as LONGTEXT, not JSON
+
+## Authentication Rules
+- Management APIs require Bearer token from `API_KEY` config
+- Use `Depends(verify_api_key)` for protected endpoints
+- Webhook endpoints verify HMAC signatures from source secrets
