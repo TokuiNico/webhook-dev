@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     # Development settings
     DEVELOPMENT: bool = True
     USE_SQLITE: bool = True  # Use SQLite for development
+    DISABLE_BROKER: bool = True  # 在開發環境跳過 broker 啟動
 
     # Security settings
     SECRET_KEY: str = "your-secret-key-change-in-production"
