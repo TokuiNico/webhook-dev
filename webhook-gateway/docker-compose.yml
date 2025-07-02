@@ -18,24 +18,27 @@ services:
       timeout: 20s
       retries: 10
 
-  # Redis service (optional for development with fakeredis)
-  redis:
-    image: redis:7-alpine
-    container_name: webhook_redis
+  # RabbitMQ service for production
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: webhook_rabbitmq
     ports:
-      - "6379:6379"
-    command: redis-server --appendonly yes
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin}
     volumes:
-      - redis_data:/data
+      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
       retries: 5
     profiles:
-      - production  # Only start Redis in production profile
+      - production  # Only start RabbitMQ in production profile
 
-  # Development API (uses fakeredis)
+  # Development API
   api-dev:
     build: .
     container_name: webhook_api_dev
@@ -49,37 +52,17 @@ services:
         condition: service_healthy
     environment:
       - DATABASE_URL=mysql+aiomysql://${MYSQL_USER:-webhook_user}:${MYSQL_PASSWORD:-webhook_password}@db:3306/${MYSQL_DATABASE:-webhook_db}
-      - REDIS_URL=redis://localhost:6379/0
+      - RABBITMQ_URL=amqp://guest:guest@localhost:5672/
       - DEVELOPMENT=true
-      - USE_FAKE_REDIS=true
     env_file:
       - .env
     profiles:
       - dev
       - default
 
-  # Development Worker (uses fakeredis)
-  worker-dev:
-    build: .
-    container_name: webhook_worker_dev
-    command: uv run celery -A app.worker.celery_app worker --loglevel=info
-    volumes:
-      - .:/app
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      - DATABASE_URL=mysql+aiomysql://${MYSQL_USER:-webhook_user}:${MYSQL_PASSWORD:-webhook_password}@db:3306/${MYSQL_DATABASE:-webhook_db}
-      - REDIS_URL=redis://localhost:6379/0
-      - DEVELOPMENT=true
-      - USE_FAKE_REDIS=true
-    env_file:
-      - .env
-    profiles:
-      - dev
-      - default
 
-  # Production API (uses real Redis)
+
+  # Production API
   api:
     build: .
     container_name: webhook_api
@@ -91,40 +74,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      redis:
+      rabbitmq:
         condition: service_healthy
     environment:
       - DATABASE_URL=mysql+aiomysql://${MYSQL_USER:-webhook_user}:${MYSQL_PASSWORD:-webhook_password}@db:3306/${MYSQL_DATABASE:-webhook_db}
-      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin}@rabbitmq:5672/
       - DEVELOPMENT=false
-      - USE_FAKE_REDIS=false
     env_file:
       - .env
     profiles:
       - production
 
-  # Production Worker (uses real Redis)
-  worker:
-    build: .
-    container_name: webhook_worker
-    command: uv run celery -A app.worker.celery_app worker --loglevel=info
-    volumes:
-      - .:/app
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      - DATABASE_URL=mysql+aiomysql://${MYSQL_USER:-webhook_user}:${MYSQL_PASSWORD:-webhook_password}@db:3306/${MYSQL_DATABASE:-webhook_db}
-      - REDIS_URL=redis://redis:6379/0
-      - DEVELOPMENT=false
-      - USE_FAKE_REDIS=false
-    env_file:
-      - .env
-    profiles:
-      - production
+
 
 volumes:
   mysql_data:
-  redis_data:
+  rabbitmq_data:

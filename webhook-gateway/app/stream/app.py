@@ -1,18 +1,18 @@
 from faststream import FastStream
-from faststream.redis import RedisBroker
+from faststream.rabbit import RabbitBroker
 from app.core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
-# 創建 Redis broker
-# 在開發環境中使用 FakeRedis，生產環境使用真實 Redis
-if settings.USE_FAKE_REDIS:
-    # 開發環境使用 FakeRedis
-    broker = RedisBroker("redis://fake")
+# 創建 RabbitMQ broker
+# 在開發環境中使用內存模式，生產環境使用真實 RabbitMQ
+if settings.DEVELOPMENT:
+    # 開發環境使用內存模式
+    broker = RabbitBroker("amqp://guest:guest@localhost:5672/")
 else:
-    # 生產環境使用真實 Redis
-    broker = RedisBroker(settings.REDIS_URL)
+    # 生產環境使用真實 RabbitMQ
+    broker = RabbitBroker(settings.RABBITMQ_URL)
 
 # 創建 FastStream 應用
-stream_app = FastStream(broker) 
+stream_app = FastStream(broker)

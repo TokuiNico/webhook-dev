@@ -12,7 +12,7 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False,
 )
 
-# Sync engine and session for Celery workers
+# Sync engine and session (legacy - 保留以防需要同步操作)
 sync_database_url = settings.DATABASE_URL.replace("sqlite+aiosqlite://", "sqlite://")
 sync_engine = create_engine(sync_database_url, echo=True)
 SessionLocal = sessionmaker(bind=sync_engine, expire_on_commit=False)

@@ -1,0 +1,15 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Genaral Rules
+- 嚴格遵循 plan.md 中定義的核心概念：Topic, Source, Subscriber, Subscription, Event
+- 按照 IMPLEMENTATION_PLAN.md 的目錄結構組織代碼
+
+# 其他 Rules
+你需要依照不同的工作使用額外的 rules
+- 系統架構: [architecture-rules.mdc](mdc:.cursor/rules/architecture-rules.mdc)
+- 程式碼標準: [coding-standards.mdc](mdc:.cursor/rules/coding-standards.mdc)
+- 資料庫: [database-patterns.mdc](mdc:.cursor/rules/database-patterns.mdc)
+- 測試: [testing-patterns.mdc](mdc:.cursor/rules/testing-patterns.mdc)
