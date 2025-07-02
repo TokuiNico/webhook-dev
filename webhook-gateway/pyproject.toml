@@ -10,7 +10,6 @@ dependencies = [
     "fastapi",
     "uvicorn[standard]",
     "pydantic",
-    "sqlalchemy",
     "mysqlclient", # Driver for MySQL
     "alembic", # For database migrations
     "python-multipart", # For handling form data
@@ -21,6 +20,7 @@ dependencies = [
     "requests>=2.32.4",
     "chardet>=5.2.0",
     "faststream[rabbit]>=0.5.43",
+    "sqlalchemy[asyncio]>=2.0.41",
 ]
 
 [project.optional-dependencies]
