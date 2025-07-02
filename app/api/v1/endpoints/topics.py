@@ -1,214 +1,148 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+"""
+主題和來源管理 API 端點
+只處理 HTTP 路由和請求/響應，業務邏輯由服務層處理
+"""
+
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from typing import List, Dict, Any
+from typing import List, Optional
 from pydantic import BaseModel
 
-from app.db.session import get_async_db
-from app.db.models import Topic, Source
-from app.core.config import settings
+from app.api.v1.deps import get_authenticated_db
+from app.services.topic_service import source_service, topic_service
 
 router = APIRouter()
-security = HTTPBearer()
 
 # Pydantic models for request/response
 class SourceCreate(BaseModel):
+    """創建來源的請求模型"""
     name: str
     secret: str
 
 class SourceResponse(BaseModel):
+    """來源響應模型"""
     id: int
     name: str
     created_at: str
-    
+
     class Config:
         from_attributes = True
 
 class TopicCreate(BaseModel):
+    """創建主題的請求模型"""
     name: str
     source_id: int
     description: str = ""
 
 class TopicResponse(BaseModel):
+    """主題響應模型"""
     id: int
     name: str
     source_id: int
     description: str
     created_at: str
-    
+
     class Config:
         from_attributes = True
-
-# API Key authentication
-def get_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Verify API key for management endpoints"""
-    expected_key = settings.MANAGEMENT_API_KEY
-    if not expected_key or expected_key == "your-management-api-key":
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Management API key not configured"
-        )
-    
-    if credentials.credentials != expected_key:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API key"
-        )
-    
-    return credentials.credentials
 
 # Source endpoints
 @router.get("/sources/", response_model=List[SourceResponse])
 async def list_sources(
-    db: AsyncSession = Depends(get_async_db),
-    api_key: str = Depends(get_api_key)
-):
-    """List all webhook sources"""
-    result = await db.execute(select(Source).order_by(Source.name))
-    sources = result.scalars().all()
-    
-    return [
-        SourceResponse(
-            id=source.id,
-            name=source.name,
-            created_at=source.created_at.isoformat()
-        )
-        for source in sources
-    ]
+    db: AsyncSession = Depends(get_authenticated_db)
+) -> List[dict]:
+    """
+    列出所有 Webhook 來源
+
+    **什麼是來源 (Source)？**
+
+    來源代表發送 webhook 的外部服務，例如：
+    - `github`: GitHub 的 webhook 事件
+    - `stripe`: Stripe 的付款事件
+    - `slack`: Slack 的機器人事件
+
+    每個來源都有自己的驗證密鑰，用於確保 webhook 的真實性。
+    """
+    return await source_service.get_sources(db)
 
 @router.post("/sources/", response_model=SourceResponse, status_code=status.HTTP_201_CREATED)
 async def create_source(
     source: SourceCreate,
-    db: AsyncSession = Depends(get_async_db),
-    api_key: str = Depends(get_api_key)
-):
-    """Create a new webhook source"""
-    
-    # Check if source already exists
-    existing_result = await db.execute(
-        select(Source).where(Source.name == source.name)
-    )
-    if existing_result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Source with name '{source.name}' already exists"
-        )
-    
-    # Create new source
-    db_source = Source(
-        name=source.name,
-        secret=source.secret
-    )
-    
-    db.add(db_source)
-    await db.commit()
-    await db.refresh(db_source)
-    
-    return SourceResponse(
-        id=db_source.id,
-        name=db_source.name,
-        created_at=db_source.created_at.isoformat()
-    )
+    db: AsyncSession = Depends(get_authenticated_db)
+) -> dict:
+    """
+    創建新的 Webhook 來源
+
+    **範例：**
+    ```json
+    {
+        "name": "github",
+        "secret": "your-github-webhook-secret"
+    }
+    ```
+
+    **注意：** 密鑰用於驗證 webhook 的 HMAC 簽名，確保請求來自可信的來源。
+    """
+    return await source_service.create_source(source.name, source.secret, db)
 
 # Topic endpoints
 @router.get("/topics/", response_model=List[TopicResponse])
 async def list_topics(
-    source_id: int = None,
-    db: AsyncSession = Depends(get_async_db),
-    api_key: str = Depends(get_api_key)
-):
-    """List all topics, optionally filtered by source"""
-    query = select(Topic)
-    
-    if source_id:
-        query = query.where(Topic.source_id == source_id)
-    
-    query = query.order_by(Topic.name)
-    result = await db.execute(query)
-    topics = result.scalars().all()
-    
-    return [
-        TopicResponse(
-            id=topic.id,
-            name=topic.name,
-            source_id=topic.source_id,
-            description=topic.description or "",
-            created_at=topic.created_at.isoformat()
-        )
-        for topic in topics
-    ]
+    source_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_authenticated_db)
+) -> List[dict]:
+    """
+    列出所有主題
+
+    **什麼是主題 (Topic)？**
+
+    主題是具體的事件類型，表示特定類型的 webhook 事件。主題通常以 `來源.事件` 的格式命名：
+
+    - `github.push`: GitHub 代碼推送事件
+    - `github.pull_request`: GitHub Pull Request 事件
+    - `stripe.payment.succeeded`: Stripe 付款成功事件
+    - `stripe.payment.failed`: Stripe 付款失敗事件
+
+    **工作流程：**
+    1. 外部服務發送 webhook 到 `/ingest/{source_name}/{topic_name}`
+    2. 系統驗證來源並識別主題
+    3. 查找該主題的所有訂閱者
+    4. 將事件異步分發給所有訂閱者
+
+    **參數：**
+    - `source_id`: 可選，只顯示特定來源的主題
+    """
+    return await topic_service.get_topics(db, source_id)
 
 @router.post("/topics/", response_model=TopicResponse, status_code=status.HTTP_201_CREATED)
 async def create_topic(
     topic: TopicCreate,
-    db: AsyncSession = Depends(get_async_db),
-    api_key: str = Depends(get_api_key)
-):
-    """Create a new topic"""
-    
-    # Verify source exists
-    source_result = await db.execute(
-        select(Source).where(Source.id == topic.source_id)
-    )
-    if not source_result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Source with id {topic.source_id} not found"
-        )
-    
-    # Check if topic already exists
-    existing_result = await db.execute(
-        select(Topic).where(Topic.name == topic.name)
-    )
-    if existing_result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Topic with name '{topic.name}' already exists"
-        )
-    
-    # Create new topic
-    db_topic = Topic(
-        name=topic.name,
-        source_id=topic.source_id,
-        description=topic.description
-    )
-    
-    db.add(db_topic)
-    await db.commit()
-    await db.refresh(db_topic)
-    
-    return TopicResponse(
-        id=db_topic.id,
-        name=db_topic.name,
-        source_id=db_topic.source_id,
-        description=db_topic.description or "",
-        created_at=db_topic.created_at.isoformat()
+    db: AsyncSession = Depends(get_authenticated_db)
+) -> dict:
+    """
+    創建新的主題
+
+    **範例：**
+    ```json
+    {
+        "name": "github.push",
+        "source_id": 1,
+        "description": "GitHub 代碼推送事件"
+    }
+    ```
+
+    **命名建議：**
+    - 使用點號分隔：`{service}.{event}.{sub_event}`
+    - 使用小寫字母和底線
+    - 保持一致性和可讀性
+    """
+    return await topic_service.create_topic(
+        topic.name, topic.source_id, db, topic.description
     )
 
 @router.get("/topics/{topic_id}", response_model=TopicResponse)
 async def get_topic(
     topic_id: int,
-    db: AsyncSession = Depends(get_async_db),
-    api_key: str = Depends(get_api_key)
-):
-    """Get a specific topic by ID"""
-    
-    result = await db.execute(
-        select(Topic).where(Topic.id == topic_id)
-    )
-    topic = result.scalar_one_or_none()
-    
-    if not topic:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Topic with id {topic_id} not found"
-        )
-    
-    return TopicResponse(
-        id=topic.id,
-        name=topic.name,
-        source_id=topic.source_id,
-        description=topic.description or "",
-        created_at=topic.created_at.isoformat()
-    ) 
+    db: AsyncSession = Depends(get_authenticated_db)
+) -> dict:
+    """獲取特定主題的詳細信息"""
+    return await topic_service.get_topic_by_id(topic_id, db)

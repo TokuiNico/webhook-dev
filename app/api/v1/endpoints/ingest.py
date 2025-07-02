@@ -2,54 +2,49 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.db.session import AsyncSessionLocal
+from app.api.v1.deps import get_async_db
 from app.db.models import Source, Topic, EventLog, EventLogStatus
 from app.core.security import get_webhook_body_and_signature, verify_webhook_signature, verify_stripe_signature
 from app.stream.app import broker
 from app.stream.models import WebhookEvent, SubscriptionInfo
 import logging
-import json
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-async def get_db():
-    """Dependency to get database session."""
-    async with AsyncSessionLocal() as session:
-        yield session
 
 @router.post("/{source_name}/{topic_name}")
 async def receive_webhook(
     source_name: str,
     topic_name: str,
     request: Request,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_db)
 ):
     """
     Receive and process incoming webhooks.
-    
+
     Args:
         source_name: Name of the webhook source (e.g., 'github', 'stripe')
         topic_name: Name of the topic (e.g., 'push', 'payment.succeeded')
         request: FastAPI request object
         db: Database session
-    
+
     Returns:
         JSONResponse: Acceptance confirmation
     """
     try:
         # Get request body and signature headers
         body, signature_headers = await get_webhook_body_and_signature(request)
-        
+
         # Get source from database
         source_query = select(Source).where(Source.name == source_name)
         source_result = await db.execute(source_query)
         source = source_result.scalar_one_or_none()
-        
+
         if not source:
             logger.warning(f"Unknown source: {source_name}")
             raise HTTPException(status_code=404, detail="Source not found")
-        
+
         # Get topic from database
         topic_query = select(Topic).where(
             Topic.name == topic_name,
@@ -57,15 +52,15 @@ async def receive_webhook(
         )
         topic_result = await db.execute(topic_query)
         topic = topic_result.scalar_one_or_none()
-        
+
         if not topic:
             logger.warning(f"Unknown topic: {topic_name} for source: {source_name}")
             raise HTTPException(status_code=404, detail="Topic not found")
-        
+
         # Verify signature based on source type
         signature_valid = False
         used_signature = None
-        
+
         if source_name.lower() == "github" and signature_headers["github"]:
             signature_valid = verify_webhook_signature(
                 body, signature_headers["github"], str(source.secret), "sha256"
@@ -87,13 +82,13 @@ async def receive_webhook(
             # For development, we might want to allow unsigned webhooks
             # In production, this should be False
             signature_valid = False
-        
+
         # Get client IP
         client_ip = request.client.host if request.client else "unknown"
-        
+
         # Get content type
         content_type = request.headers.get("content-type", "application/octet-stream")
-        
+
         # Create event log
         event_log = EventLog(
             topic_id=topic.id,
@@ -103,18 +98,18 @@ async def receive_webhook(
             payload=body.decode('utf-8') if body else "",
             status=EventLogStatus.RECEIVED if signature_valid else EventLogStatus.FAILED_VALIDATION
         )
-        
+
         db.add(event_log)
         await db.commit()
         await db.refresh(event_log)
-        
+
         if signature_valid:
             logger.info(f"Valid webhook received for topic {topic_name} from {source_name}")
-            
+
             # Update status to queued
             event_log.status = EventLogStatus.QUEUED
             await db.commit()
-            
+
             # 獲取所有活躍的訂閱
             from sqlalchemy import select
             subscriptions_result = await db.execute(
@@ -124,7 +119,7 @@ async def receive_webhook(
                 )
             )
             subscriptions = subscriptions_result.scalars().all()
-            
+
             # 創建 FastStream 事件
             webhook_event = WebhookEvent(
                 event_log_id=event_log.id,
@@ -145,10 +140,10 @@ async def receive_webhook(
                 ],
                 received_at=event_log.received_at
             )
-            
+
             # 發布事件到 FastStream
             await broker.publish(webhook_event, "webhook.received")
-            
+
             return JSONResponse(
                 status_code=202,
                 content={"message": "Webhook received and queued for processing"}
@@ -159,7 +154,7 @@ async def receive_webhook(
                 status_code=403,
                 detail="Invalid webhook signature"
             )
-            
+
     except HTTPException:
         raise
     except Exception as e:
