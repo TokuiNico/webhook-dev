@@ -7,7 +7,7 @@ alwaysApply: false
 
 ## Model Usage Rules
 - Import models: `from app.db.models import Source, Topic, Subscription, EventLog, DispatchLog`
-- All models inherit from declarative base in [webhook-gateway/app/db/base.py](mdc:webhook-gateway/app/db/base.py)
+- All models inherit from declarative base in [base.py](mdc:app/db/base.py)
 - Use enum values for status fields: `EventLogStatus.RECEIVED`, `DispatchLogStatus.SUCCESS`
 
 ## Query Patterns
@@ -37,7 +37,7 @@ async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
 
-# For FastStream handlers  
+# For FastStream handlers
 async def log_dispatch_result(result):
     async with AsyncSessionLocal() as db:
         # ... database operations
@@ -45,7 +45,7 @@ async def log_dispatch_result(result):
 ```
 
 ## Environment-Specific Configuration
-- Development: SQLite with [webhook-gateway/webhook.db](mdc:webhook-gateway/webhook.db)
+- Development: SQLite with webhook.db
 - Production: MySQL with connection pooling
 - Configuration loaded from [webhook-gateway/app/core/config.py](mdc:webhook-gateway/app/core/config.py)
 

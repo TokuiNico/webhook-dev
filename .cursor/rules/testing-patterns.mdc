@@ -6,8 +6,8 @@ alwaysApply: false
 # Testing and Development Patterns
 
 ## Test Environment Setup
-- Run [webhook-gateway/test_setup.py](mdc:webhook-gateway/test_setup.py) before testing
-- Use SQLite database: [webhook-gateway/webhook.db](mdc:webhook-gateway/webhook.db)
+- Run [test_setup.py](mdc:test_setup.py) before testing
+- Use SQLite database: webhook.db
 - Enable FakeRedis with `USE_FAKE_REDIS=true` in environment
 - Test APIs use `API_KEY="webhook-admin-key-123"` for consistency
 
@@ -35,7 +35,7 @@ API_KEY=your-api-key-for-management-endpoints
 ## Testing Rules
 - Test files use specific API keys for consistency
 - All tests should work with SQLite + FakeRedis
-- Use [webhook-gateway/debug_webhook.py](mdc:webhook-gateway/debug_webhook.py) for webhook debugging
+- Use [debug_webhook.py](mdc:debug_webhook.py) for webhook debugging
 - Health check endpoint: `GET /health` (no auth required)
 
 ## FastStream Testing
