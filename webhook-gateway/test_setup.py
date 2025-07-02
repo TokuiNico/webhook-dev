@@ -26,7 +26,7 @@ async def insert_test_data():
     """插入測試資料"""
     print("📝 插入測試資料...")
 
-        session = AsyncSessionLocal()
+    session = AsyncSessionLocal()
     try:
         # 檢查並創建 GitHub 來源
         from sqlalchemy import select
@@ -98,7 +98,6 @@ async def show_test_info():
     print("\n🧪 測試環境配置:")
     print(f"   - 資料庫: {settings.DATABASE_URL}")
     print(f"   - 開發模式: {settings.DEVELOPMENT}")
-    print(f"   - 使用 FakeRedis: {settings.USE_FAKE_REDIS}")
     print(f"   - 使用 SQLite: {settings.USE_SQLITE}")
 
     print("\n🚀 可以進行的測試:")
