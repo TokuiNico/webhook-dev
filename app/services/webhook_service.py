@@ -133,7 +133,7 @@ class WebhookService:
             payload=payload,
             headers=json.dumps(headers),
             source_ip=source_ip,
-            status=status.value,  # 使用枚舉的值
+            status=status,  # 使用枚舉的值
         )
 
         db.add(event_log)
@@ -195,7 +195,7 @@ class WebhookService:
         await db.execute(
             update(EventLog)
             .where(EventLog.id == event_log.id)
-            .values(status=status.value)
+            .values(status=status)
         )
         await db.commit()
 
