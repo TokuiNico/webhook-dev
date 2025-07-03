@@ -19,8 +19,8 @@ alwaysApply: false
 
 ## DEPRECATED - Do Not Use
 - Never modify files in [app/worker/](mdc:app/worker) (Celery legacy)
-- Never use [app/api/v1/endpoints/ingest.py](mdc:app/api/v1/endpoints/ingest.py)
-- Always use [app/api/v1/endpoints/ingest_faststream.py](mdc:app/api/v1/endpoints/ingest_faststream.py) for webhook ingestion
+- Use service layer for business logic separation
+- Always use [app/api/v1/endpoints/ingest.py](mdc:app/api/v1/endpoints/ingest.py) for webhook ingestion
 
 ## FastStream Event Pattern
 When implementing webhook processing:

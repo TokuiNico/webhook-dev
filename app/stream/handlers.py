@@ -1,14 +1,11 @@
 import httpx
 import logging
 from datetime import datetime
-from typing import List
 
-from faststream import Depends
 from app.stream.broker_manager import broker, broker_manager
 from app.stream.models import WebhookEvent, WebhookDispatchResult, SubscriptionInfo
 from app.db.session import AsyncSessionLocal
 from app.db.models import DispatchLog, DispatchLogStatus
-from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +23,8 @@ async def process_webhook_event(event: WebhookEvent):
             # 為每個訂閱者發布分發任務
             await broker_manager.publish(
                 {
-                    "event": event.dict(),
-                    "subscription": subscription.dict()
+                    "event": event.model_dump(),
+                    "subscription": subscription.model_dump()
                 },
                 "webhook.dispatch"
             )
