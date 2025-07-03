@@ -3,15 +3,19 @@ Webhook 接收和處理服務
 處理 webhook 事件的接收、驗證、記錄和分發邏輯
 """
 
-from typing import Dict, List, Optional, Tuple
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
-from fastapi import HTTPException
-import logging
 import json
+import logging
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 
-from app.db.models import Source, Topic, EventLog, EventLogStatus, Subscription
-from app.core.security import verify_webhook_signature, verify_stripe_signature
+from fastapi import HTTPException
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.security import verify_stripe_signature, verify_webhook_signature
+from app.db.models import EventLog, EventLogStatus, Source, Subscription, Topic
+from app.stream.broker_manager import broker_manager
+from app.stream.models import SubscriptionInfo, WebhookEvent
 
 logger = logging.getLogger(__name__)
 
@@ -175,10 +179,46 @@ class WebhookService:
     ) -> None:
         """
         發布 webhook 事件到消息隊列
+
+        根據 IMPLEMENTATION_PLAN.md 的架構，將事件發布到 FastStream 的 "webhook.received" 隊列
+        由 FastStream handlers 處理事件分發給所有訂閱者
         """
-        # 暫時跳過發布邏輯，避免型別問題
-        logger.info(f"🚀 事件準備發送處理: {event_log.id}")
-        # TODO: 實現事件發布邏輯
+        logger.info(f"🚀 準備發布事件到消息隊列: {event_log.id}")
+
+
+                        # 將 SQLAlchemy 訂閱對象轉換為 Pydantic 模型
+        subscription_infos = [
+            SubscriptionInfo(
+                id=sub.id,  # type: ignore
+                subscriber_name=sub.subscriber_name,  # type: ignore
+                target_url=sub.target_url,  # type: ignore
+                is_active=sub.is_active  # type: ignore
+            )
+            for sub in subscriptions
+        ]
+
+        # 創建 WebhookEvent 對象
+        webhook_event = WebhookEvent(
+            event_log_id=event_log.id,  # type: ignore
+            topic_id=topic.id,  # type: ignore
+            topic_name=topic.name,  # type: ignore
+            source_name=source.name,  # type: ignore
+            payload=payload,
+            content_type=content_type,
+            headers=headers,
+            source_ip=source_ip,
+            subscriptions=subscription_infos,
+            received_at=datetime.utcnow()
+        )
+
+        # 發布事件到 FastStream 的 "webhook.received" 隊列
+        # broker_manager 會自動處理開發/生產模式的差異
+        await broker_manager.publish(webhook_event, "webhook.received")
+
+        logger.info(
+            f"✅ 事件已發布到消息隊列: {event_log.id}, "
+            f"主題: {topic.name}, 訂閱數: {len(subscription_infos)}"
+        )
 
     async def update_event_status(
         self, event_log: EventLog, status: EventLogStatus, db: AsyncSession
