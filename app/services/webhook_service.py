@@ -3,7 +3,6 @@ Webhook 接收和處理服務
 處理 webhook 事件的接收、驗證、記錄和分發邏輯
 """
 
-import json
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
@@ -12,52 +11,13 @@ from fastapi import HTTPException
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import verify_stripe_signature, verify_webhook_signature
+from app.core.signature import SignatureValidator
 from app.db.models import EventLog, EventLogStatus, Source, Subscription, Topic
 from app.stream.broker_manager import broker_manager
 from app.stream.models import SubscriptionInfo, WebhookEvent
 
 logger = logging.getLogger(__name__)
 
-
-class SignatureValidator:
-    """簽名驗證器，支援擴展不同的簽名驗證方式"""
-
-    @staticmethod
-    def validate_signature(
-        source_name: str,
-        body: bytes,
-        signature_headers: Dict[str, Optional[str]],
-        secret: str,
-    ) -> bool:
-        """
-        根據來源類型驗證簽名
-
-        Args:
-            source_name: 來源名稱
-            body: 請求體
-            signature_headers: 簽名頭字典
-            secret: 來源密鑰
-
-        Returns:
-            bool: 簽名是否有效
-        """
-        source_lower = source_name.lower()
-
-        match source_lower:
-            case "stripe":
-                stripe_sig = signature_headers.get("stripe")
-                if stripe_sig:
-                    return verify_stripe_signature(body, stripe_sig, secret)
-            case "github":
-                github_sig = signature_headers.get("github")
-                if github_sig:
-                    return verify_webhook_signature(body, github_sig, secret)
-            case _:
-                generic_sig = signature_headers.get("generic")
-                if generic_sig:
-                    return verify_webhook_signature(body, generic_sig, secret)
-        return False
 
 
 class WebhookService:
@@ -131,11 +91,14 @@ class WebhookService:
         Returns:
             EventLog: 創建的事件記錄
         """
+        # 將 headers 標準化為小寫鍵的字典，並確保值為字串
+        normalized_headers = {str(k).lower(): str(v) for k, v in headers.items()}
+
         event_log = EventLog(
             topic_id=topic.id,
             content_type=content_type,
             payload=payload,
-            headers=json.dumps(headers),
+            headers=normalized_headers,
             source_ip=source_ip,
             status=status,  # 使用枚舉的值
         )
@@ -161,7 +124,7 @@ class WebhookService:
         """
         subscriptions_result = await db.execute(
             select(Subscription).where(
-                Subscription.topic_id == topic.id, Subscription.is_active == True
+                Subscription.topic_id == topic.id, Subscription.is_active
             )
         )
         return list(subscriptions_result.scalars().all())
@@ -185,8 +148,7 @@ class WebhookService:
         """
         logger.info(f"🚀 準備發布事件到消息隊列: {event_log.id}")
 
-
-                        # 將 SQLAlchemy 訂閱對象轉換為 Pydantic 模型
+        # 將 SQLAlchemy 訂閱對象轉換為 Pydantic 模型
         subscription_infos = [
             SubscriptionInfo(
                 id=sub.id,  # type: ignore
@@ -197,6 +159,9 @@ class WebhookService:
             for sub in subscriptions
         ]
 
+        # 標準化 headers：小寫鍵，字串值
+        normalized_headers = {str(k).lower(): str(v) for k, v in headers.items()}
+
         # 創建 WebhookEvent 對象
         webhook_event = WebhookEvent(
             event_log_id=event_log.id,  # type: ignore
@@ -205,7 +170,7 @@ class WebhookService:
             source_name=source.name,  # type: ignore
             payload=payload,
             content_type=content_type,
-            headers=headers,
+            headers=normalized_headers,
             source_ip=source_ip,
             subscriptions=subscription_infos,
             received_at=datetime.utcnow()

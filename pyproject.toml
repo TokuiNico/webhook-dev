@@ -11,6 +11,8 @@ dependencies = [
     "uvicorn[standard]",
     "pydantic",
     "mysqlclient", # Driver for MySQL
+    "aiomysql", # Async MySQL driver
+    "pymysql", # Required by aiomysql
     "alembic", # For database migrations
     "python-multipart", # For handling form data
     "lxml", # For handling XML
@@ -19,8 +21,9 @@ dependencies = [
     "aiosqlite>=0.21.0",
     "requests>=2.32.4",
     "chardet>=5.2.0",
-    "faststream[rabbit]>=0.5.43",
+    "faststream[rabbit,cli]>=0.5.43",
     "sqlalchemy[asyncio]>=2.0.41",
+    "prometheus_client>=0.20.0",
 ]
 
 [project.optional-dependencies]

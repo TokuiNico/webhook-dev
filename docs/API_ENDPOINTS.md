@@ -13,15 +13,15 @@
 
 ## 🔐 **認證**
 
-所有管理 API 端點都需要 Bearer Token 認證：
+所有管理 API 端點都需要 Bearer Token 認證，金鑰來自環境變數 `MANAGEMENT_API_KEY`：
 
 ```bash
-Authorization: Bearer your-api-key-for-management-endpoints
+Authorization: Bearer $MANAGEMENT_API_KEY
 ```
 
 **認證錯誤回應：**
 - `401 Unauthorized` - 無效或缺少 API Key
-- `500 Internal Server Error` - API Key 未配置
+- `500 Internal Server Error` - 管理 API Key 未配置（`MANAGEMENT_API_KEY` 未設置或為預設占位值）
 
 ---
 
@@ -42,7 +42,7 @@ Authorization: Bearer your-api-key-for-management-endpoints
 
 **回應：**
 - `202 Accepted` - 成功接收並排隊處理
-- `400 Bad Request` - 無效請求或簽名驗證失敗
+- `400/403` - 無效請求或簽名驗證失敗
 - `404 Not Found` - 來源或主題不存在
 
 **範例：**
@@ -126,75 +126,13 @@ curl -X POST \
 
 獲取系統總覽統計。
 
-**回應：**
-```json
-{
-  "total_webhooks": 100,
-  "today_webhooks": 25,
-  "week_webhooks": 150,
-  "month_webhooks": 500,
-  "active_subscriptions": 10,
-  "total_subscriptions": 12,
-  "success_rate": 95.5,
-  "recent_events": [
-    {
-      "id": 1,
-      "source": "github",
-      "topic": "push",
-      "status": "received",
-      "received_at": "2024-01-01T12:00:00",
-      "content_type": "application/json"
-    }
-  ],
-  "system_status": "healthy"
-}
-```
-
 ### GET `/api/v1/stats/activity`
 
 獲取活動統計數據。
 
-**查詢參數：**
-- `days` - 統計天數 (預設: 7)
-
-**回應：**
-```json
-{
-  "daily_activity": [
-    {"date": "2024-01-01", "webhooks": 25},
-    {"date": "2024-01-02", "webhooks": 30}
-  ],
-  "hourly_activity": [
-    {"hour": 9, "webhooks": 5},
-    {"hour": 10, "webhooks": 8}
-  ],
-  "period_days": 7
-}
-```
-
 ### GET `/api/v1/stats/sources`
 
 獲取按來源分組的統計。
-
-**回應：**
-```json
-{
-  "source_stats": [
-    {
-      "source": "github",
-      "webhook_count": 50,
-      "topic_count": 3
-    }
-  ],
-  "top_topics": [
-    {
-      "topic": "push",
-      "source": "github", 
-      "webhook_count": 30
-    }
-  ]
-}
-```
 
 ---
 
@@ -204,61 +142,17 @@ curl -X POST \
 
 列出所有 webhook 來源。
 
-**回應：**
-```json
-[
-  {
-    "id": 1,
-    "name": "github",
-    "created_at": "2024-01-01T00:00:00"
-  }
-]
-```
-
 ### POST `/api/v1/manage/sources/`
 
 創建新的 webhook 來源。
-
-**請求體：**
-```json
-{
-  "name": "stripe",
-  "secret": "whsec_abc123..."
-}
-```
 
 ### GET `/api/v1/manage/topics/`
 
 列出所有主題。
 
-**查詢參數：**
-- `source_id` (可選) - 按來源 ID 篩選
-
-**回應：**
-```json
-[
-  {
-    "id": 1,
-    "name": "push",
-    "source_id": 1,
-    "description": "Git push events",
-    "created_at": "2024-01-01T00:00:00"
-  }
-]
-```
-
 ### POST `/api/v1/manage/topics/`
 
 創建新主題。
-
-**請求體：**
-```json
-{
-  "name": "payment_success",
-  "source_id": 2,
-  "description": "Successful payment notifications"
-}
-```
 
 ### GET `/api/v1/manage/topics/{topic_id}`
 
@@ -272,25 +166,13 @@ curl -X POST \
 
 健康檢查端點 (無需認證)。
 
-**回應：**
-```json
-{
-  "status": "healthy",
-  "service": "webhook-gateway"
-}
-```
-
 ### GET `/`
 
 根端點 (無需認證)。
 
-**回應：**
-```json
-{
-  "status": "ok",
-  "service": "webhook-gateway"
-}
-```
+### GET `/metrics`
+
+Prometheus 指標（純文字輸出，無需認證）。
 
 ---
 
@@ -377,4 +259,4 @@ curl -H "Authorization: Bearer your-api-key-for-management-endpoints" \
 
 ---
 
-**🎯 所有 API 端點都已實作並測試通過！** 
+**🎯 所有 API 端點都已實作並測試通過！**

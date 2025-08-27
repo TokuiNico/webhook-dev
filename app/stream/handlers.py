@@ -6,6 +6,7 @@ from app.stream.broker_manager import broker, broker_manager
 from app.stream.models import WebhookEvent, WebhookDispatchResult, SubscriptionInfo
 from app.db.session import AsyncSessionLocal
 from app.db.models import DispatchLog, DispatchLogStatus
+from app.stream.retry_handler import retry_handler
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +21,12 @@ async def process_webhook_event(event: WebhookEvent):
     # 並行發送給所有訂閱者
     for subscription in event.subscriptions:
         if subscription.is_active:
-            # 為每個訂閱者發布分發任務
+            # 為每個訂閱者發布分發任務（初始化 attempt=1）
             await broker_manager.publish(
                 {
                     "event": event.model_dump(),
-                    "subscription": subscription.model_dump()
+                    "subscription": subscription.model_dump(),
+                    "attempt": 1,
                 },
                 "webhook.dispatch"
             )
@@ -39,10 +41,13 @@ async def dispatch_to_subscriber(message: dict):
     """
     event_data = WebhookEvent(**message["event"])
     subscription_data = SubscriptionInfo(**message["subscription"])
+    attempt = int(message.get("attempt", 1))
 
-    logger.info(f"🚀 分發 webhook 到 {subscription_data.target_url}")
+    logger.info(f"🚀 分發 webhook 到 {subscription_data.target_url} (attempt={attempt})")
 
     result = await send_webhook_to_subscriber(event_data, subscription_data)
+    # 設置本次嘗試次數
+    result.attempt = attempt
 
     # 記錄分發結果到數據庫
     await log_dispatch_result(result)
@@ -51,6 +56,29 @@ async def dispatch_to_subscriber(message: dict):
         logger.info(f"✅ 成功分發 webhook 到 {subscription_data.target_url}")
     else:
         logger.error(f"❌ 分發失敗 webhook 到 {subscription_data.target_url}: {result.error_message}")
+        # 重試判斷與排程
+        if await retry_handler.should_retry(result, attempt):
+            await retry_handler.schedule_retry(event_data, subscription_data, attempt + 1)
+
+@broker.subscriber("webhook.retry")
+async def dispatch_retry(message: dict):
+    """
+    重試 webhook 分發
+    """
+    event_data = WebhookEvent(**message["event"])
+    subscription_data = SubscriptionInfo(**message["subscription"])
+    attempt = int(message.get("attempt", 2))
+
+    logger.info(f"🔁 重試分發 webhook 到 {subscription_data.target_url} (attempt={attempt})")
+
+    result = await send_webhook_to_subscriber(event_data, subscription_data)
+    result.attempt = attempt
+
+    await log_dispatch_result(result)
+
+    if not result.success:
+        if await retry_handler.should_retry(result, attempt):
+            await retry_handler.schedule_retry(event_data, subscription_data, attempt + 1)
 
 async def send_webhook_to_subscriber(
     event: WebhookEvent,

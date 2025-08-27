@@ -149,6 +149,18 @@ check: ## 運行所有檢查 (格式化 + 檢查 + 測試)
 	$(MAKE) test
 	@echo "$(GREEN)✅ 所有檢查完成$(RESET)"
 
+##@ 🔧 設置與配置
+
+setup-config: ## 設置配置目錄和檔案
+	@echo "$(BLUE)設置配置目錄...$(RESET)"
+	@mkdir -p config/mysql config/rabbitmq logs
+	@echo "[mysqld]" > config/mysql/my.cnf
+	@echo "character-set-server=utf8mb4" >> config/mysql/my.cnf
+	@echo "collation-server=utf8mb4_unicode_ci" >> config/mysql/my.cnf
+	@echo "default-time-zone='+08:00'" >> config/mysql/my.cnf
+	@echo "[rabbitmq_management]." > config/rabbitmq/enabled_plugins
+	@echo "$(GREEN)✅ 配置目錄設置完成$(RESET)"
+
 ##@ 🧹 清理
 
 clean: ## 清理所有生成文件和緩存
@@ -194,6 +206,33 @@ docker-quick-start: ## Docker 快速開始
 	$(MAKE) docker-build
 	$(MAKE) compose-up
 	@echo "$(GREEN)✅ Docker 環境已啟動！訪問 http://localhost:8000$(RESET)"
+
+start-all: ## 一鍵啟動所有服務 (生產環境)
+	@echo "$(BLUE)🚀 一鍵啟動所有服務 (生產環境)...$(RESET)"
+	@echo "$(YELLOW)正在準備配置目錄...$(RESET)"
+	$(MAKE) setup-config
+	@echo "$(YELLOW)正在構建 Docker 映像...$(RESET)"
+	docker compose build --no-cache
+	@echo "$(YELLOW)正在啟動所有服務...$(RESET)"
+	docker compose up -d
+	@echo "$(GREEN)✅ 所有服務已啟動！$(RESET)"
+	@echo "$(BLUE)服務端點:$(RESET)"
+	@echo "  API 服務器: http://localhost:8000"
+	@echo "  API 文檔: http://localhost:8000/docs"
+	@echo "  RabbitMQ 管理: http://localhost:15672"
+	@echo "  MySQL: localhost:3306"
+	@echo "$(YELLOW)使用 'make logs' 查看日誌$(RESET)"
+	@echo "$(YELLOW)使用 'make stop-all' 停止所有服務$(RESET)"
+
+stop-all: ## 停止所有服務
+	@echo "$(BLUE)停止所有服務...$(RESET)"
+	docker compose down
+	@echo "$(GREEN)✅ 所有服務已停止$(RESET)"
+
+restart-all: ## 重啟所有服務
+	@echo "$(BLUE)重啟所有服務...$(RESET)"
+	$(MAKE) stop-all
+	$(MAKE) start-all
 
 ##@ ℹ️  資訊
 

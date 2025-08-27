@@ -6,44 +6,13 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
-from pydantic import BaseModel
 
 from app.api.v1.deps import get_authenticated_db
 from app.services.topic_service import source_service, topic_service
+from app.schemas.topic import TopicCreate, TopicResponse
+from app.schemas.source import SourceCreate, SourceResponse
 
 router = APIRouter()
-
-# Pydantic models for request/response
-class SourceCreate(BaseModel):
-    """創建來源的請求模型"""
-    name: str
-    secret: str
-
-class SourceResponse(BaseModel):
-    """來源響應模型"""
-    id: int
-    name: str
-    created_at: str
-
-    class Config:
-        from_attributes = True
-
-class TopicCreate(BaseModel):
-    """創建主題的請求模型"""
-    name: str
-    source_id: int
-    description: str = ""
-
-class TopicResponse(BaseModel):
-    """主題響應模型"""
-    id: int
-    name: str
-    source_id: int
-    description: str
-    created_at: str
-
-    class Config:
-        from_attributes = True
 
 # Source endpoints
 @router.get("/sources/", response_model=List[SourceResponse])
@@ -136,7 +105,7 @@ async def create_topic(
     - 保持一致性和可讀性
     """
     return await topic_service.create_topic(
-        topic.name, topic.source_id, db, topic.description
+        topic.name, topic.source_id, db, topic.description or ""
     )
 
 @router.get("/topics/{topic_id}", response_model=TopicResponse)
