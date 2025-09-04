@@ -26,6 +26,7 @@ dependencies = [
     "prometheus_client>=0.20.0",
     "taskiq>=0.11.18",
     "taskiq-aio-pika>=0.4.3",
+    "ulid-rs-py>=0.3.1",
 ]
 
 [project.optional-dependencies]
