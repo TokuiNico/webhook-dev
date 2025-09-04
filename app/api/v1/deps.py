@@ -26,13 +26,13 @@ def get_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)) -
     Raises:
         HTTPException: 當 API 金鑰無效或未配置時
     """
-    expected_key = settings.MANAGEMENT_API_KEY
+    expected_key = settings.API_KEY
 
     # 檢查 API 金鑰是否已配置
-    if not expected_key or expected_key == "your-management-api-key":
+    if not settings.API_KEY:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="管理 API 金鑰尚未配置，請檢查環境變數 MANAGEMENT_API_KEY"
+            detail="管理 API 金鑰尚未配置，請檢查環境變數 API_KEY"
         )
 
     # 驗證 API 金鑰

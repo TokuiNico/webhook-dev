@@ -119,7 +119,6 @@ curl -H "Authorization: Bearer your-api-key" \
 | `DATABASE_URL` | MySQL 連接字串 | - |
 | `RABBITMQ_URL` | RabbitMQ 連接字串 | - |
 | `API_KEY` | 管理 API 金鑰 | - |
-| `SECRET_KEY` | 應用程式密鑰 | - |
 
 ### 服務端點
 
@@ -170,7 +169,3 @@ app/
 ## 📄 授權條款
 
 此專案採用 MIT 授權條款 - 詳見 [LICENSE](LICENSE) 檔案
-
----
-
-**由 ❤️ 製作** | 適用於現代化的 Webhook 處理需求

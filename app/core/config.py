@@ -13,9 +13,7 @@ class Settings(BaseSettings):
     DISABLE_BROKER: bool = True  # 在開發環境跳過 broker 啟動
 
     # Security settings
-    SECRET_KEY: str = "your-secret-key-change-in-production"
-    API_KEY: str = "your-api-key-for-management-endpoints"
-    MANAGEMENT_API_KEY: str = "your-management-api-key"
+    API_KEY: str = "your-api-key"
 
     # MySQL settings (for production)
     MYSQL_ROOT_PASSWORD: str = "rootpassword"

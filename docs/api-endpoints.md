@@ -13,15 +13,15 @@
 
 ## 🔐 **認證**
 
-所有管理 API 端點都需要 Bearer Token 認證，金鑰來自環境變數 `MANAGEMENT_API_KEY`：
+所有管理 API 端點都需要 Bearer Token 認證，金鑰來自環境變數 `API_KEY`：
 
 ```bash
-Authorization: Bearer $MANAGEMENT_API_KEY
+Authorization: Bearer $API_KEY
 ```
 
 **認證錯誤回應：**
 - `401 Unauthorized` - 無效或缺少 API Key
-- `500 Internal Server Error` - 管理 API Key 未配置（`MANAGEMENT_API_KEY` 未設置或為預設占位值）
+- `500 Internal Server Error` - API Key 未配置（`API_KEY` 未設置或為預設占位值）
 
 ---
 
@@ -183,14 +183,14 @@ Prometheus 指標（純文字輸出，無需認證）。
 ```bash
 # 創建 GitHub 來源
 curl -X POST \
-  -H "Authorization: Bearer your-api-key-for-management-endpoints" \
+  -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{"name": "github", "secret": "github_webhook_secret"}' \
   http://127.0.0.1:8000/api/v1/manage/sources/
 
 # 創建 push 主題
 curl -X POST \
-  -H "Authorization: Bearer your-api-key-for-management-endpoints" \
+  -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{"name": "push", "source_id": 1, "description": "Git push events"}' \
   http://127.0.0.1:8000/api/v1/manage/topics/
@@ -200,7 +200,7 @@ curl -X POST \
 
 ```bash
 curl -X POST \
-  -H "Authorization: Bearer your-api-key-for-management-endpoints" \
+  -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
     "topic_id": 1,
@@ -225,11 +225,11 @@ curl -X POST \
 
 ```bash
 # 總覽統計
-curl -H "Authorization: Bearer your-api-key-for-management-endpoints" \
+curl -H "Authorization: Bearer your-api-key" \
   http://127.0.0.1:8000/api/v1/stats/overview
 
 # 活動統計
-curl -H "Authorization: Bearer your-api-key-for-management-endpoints" \
+curl -H "Authorization: Bearer your-api-key" \
   http://127.0.0.1:8000/api/v1/stats/activity?days=30
 ```
 

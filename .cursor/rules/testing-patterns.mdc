@@ -29,7 +29,7 @@ DEVELOPMENT=true
 USE_SQLITE=true
 USE_FAKE_REDIS=true
 DATABASE_URL=sqlite+aiosqlite:///./webhook.db
-API_KEY=your-api-key-for-management-endpoints
+API_KEY=your-api-key
 ```
 
 ## Testing Rules

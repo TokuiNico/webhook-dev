@@ -63,9 +63,12 @@ DATABASE_URL=mysql+aiomysql://user:pass@localhost:3306/webhook_db
 RABBITMQ_URL=amqp://admin:admin@localhost:5672/
 
 # 安全配置
-SECRET_KEY=your-secret-key
-API_KEY=your-api-key
+API_KEY=your-api-key  # 管理端點認證
 ```
+
+**API Key 說明**:
+- `API_KEY`: 保護所有管理端點 (訂閱、統計、來源管理)
+- Webhook 接收端點不需要 API Key，使用簽名驗證
 
 ### 3. 創建來源和主題
 
@@ -237,7 +240,7 @@ python run_all_tests.py
 
 ### API 金鑰管理
 - 管理端點需要 `Authorization: Bearer <token>`
-- 在環境變數中設置 `API_KEY` 和 `MANAGEMENT_API_KEY`
+- 在環境變數中設置 `API_KEY`
 - 定期輪換 API 金鑰
 
 ## 📚 相關資源

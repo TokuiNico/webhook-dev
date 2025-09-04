@@ -59,7 +59,6 @@ services:
       - DATABASE_URL=mysql+aiomysql://${MYSQL_USER:-webhook_user}:${MYSQL_PASSWORD:-webhook_password}@db:3306/${MYSQL_DATABASE:-webhook_db}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin}@rabbitmq:5672/
       - USE_SQLITE=false
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
       - API_KEY=${API_KEY:-your-api-key}
     env_file:
       - .env
