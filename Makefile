@@ -21,8 +21,11 @@ dev-ipython:  ## 啟動 ipython shell
 	uv run ipython
 
 ##@ 測試
-test: ## 運行測試
+test: ## 運行單元測試
 	uv run python -m pytest  tests/ -v
+
+e2e-test: ## 運行端到端 webhook 系統測試
+	uv run python scripts/e2e_webhook_test.py
 
 ##@ 功能演示腳本
 demo-webhook: ## 演示 webhook 功能（需要服務器運行）

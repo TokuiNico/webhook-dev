@@ -136,6 +136,9 @@ curl -H "Authorization: Bearer your-api-key" \
 # 運行單元測試
 make test
 
+# 運行端到端測試（驗證完整 webhook 流程）
+make e2e-test
+
 # 設置測試資料
 make setup-test-data
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import ingest, subscriptions, stats, topics
+from app.api.v1.endpoints import ingest, subscriptions, stats, topics, logs
 
 api_router = APIRouter()
 
@@ -13,3 +13,4 @@ api_router.include_router(stats.router, prefix="/stats", tags=["statistics"])
 api_router.include_router(
     topics.router, prefix="/manage", tags=["topic-source-management"]
 )
+api_router.include_router(logs.router, prefix="/logs", tags=["log-management"])

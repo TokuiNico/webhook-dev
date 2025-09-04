@@ -29,6 +29,23 @@
   uv run python scripts/subscriptions_api_demo.py
   ```
 
+### 🧪 測試腳本
+
+- **`e2e_webhook_test.py`** - 端到端 webhook 系統測試
+  ```bash
+  make e2e-test
+  # 或
+  uv run python scripts/e2e_webhook_test.py
+  ```
+
+  此腳本執行完整的工作流程測試：
+  - 創建來源 (source)
+  - 創建主題 (topic)
+  - 創建訂閱 (subscription)
+  - 發送 webhook 到 ingest URL
+  - 驗證系統統計
+  - 清理測試數據
+
 ### 🔧 除錯腳本
 
 - **`webhook_debug.py`** - 用於除錯 webhook 問題
@@ -54,8 +71,11 @@ make worker
 make setup-test-data
 ```
 
-### 3. 運行演示腳本
+### 3. 運行測試和演示腳本
 ```bash
+# 端到端測試（推薦先運行）
+make e2e-test
+
 # 測試 webhook 功能
 make demo-webhook
 
