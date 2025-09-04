@@ -10,7 +10,7 @@ class SubscriptionBase(BaseModel):
 
 
 class SubscriptionCreate(SubscriptionBase):
-    topic_id: int
+    topic_id: str  # 改為 str 支援 ULID
 
 
 class SubscriptionUpdate(BaseModel):
@@ -20,8 +20,8 @@ class SubscriptionUpdate(BaseModel):
 
 
 class SubscriptionResponse(SubscriptionBase):
-    id: int
-    topic_id: int
+    id: str  # 改為 str 支援 ULID
+    topic_id: str  # 改為 str 支援 ULID
     created_at: datetime
     updated_at: datetime
 

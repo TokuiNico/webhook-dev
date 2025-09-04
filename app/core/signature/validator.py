@@ -16,7 +16,7 @@ class SignatureStrategy(ABC):
     """簽名驗證策略基類"""
 
     @abstractmethod
-    def get_signature_header_key(self) -> SignatureValidatorType:
+    def get_signature_header_key(self) -> str:
         """返回該來源使用的簽名 header 鍵名"""
         pass
 
@@ -41,19 +41,17 @@ class SignatureValidator:
         # 延遲載入策略，避免循環引用
         from .strategies import (
             GitHubSignatureStrategy,
-            StripeSignatureStrategy,
-            GenericSignatureStrategy,
+            NoneSignatureStrategy,
         )
         from .types import SignatureValidatorType
 
         # 註冊核心策略
-        self._strategies: Dict[SignatureValidatorType, SignatureStrategy] = {
-            SignatureValidatorType.GITHUB: GitHubSignatureStrategy(),
-            SignatureValidatorType.STRIPE: StripeSignatureStrategy(),
-            SignatureValidatorType.GENERIC: GenericSignatureStrategy(),
+        self._strategies: Dict[str, SignatureStrategy] = {
+            SignatureValidatorType.GITHUB.value: GitHubSignatureStrategy(),
+            SignatureValidatorType.NONE.value: NoneSignatureStrategy(),
         }
         # 預設策略
-        self._default_validator_type = SignatureValidatorType.GENERIC
+        self._default_validator_type = SignatureValidatorType.NONE.value
 
     def register_strategy(self, source_name: str, strategy: SignatureStrategy) -> None:
         """註冊新的簽名驗證策略
@@ -62,7 +60,7 @@ class SignatureValidator:
             source_name: 來源名稱（會轉為小寫）
             strategy: 簽名驗證策略實例
         """
-        self._strategies[SignatureValidatorType(source_name.lower())] = strategy
+        self._strategies[source_name.lower()] = strategy
         logger.info(f"✅ 註冊簽名驗證策略: {source_name}")
 
     def get_supported_sources(self) -> list[str]:
@@ -78,7 +76,7 @@ class SignatureValidator:
 
     def validate_signature(
         self,
-        validator_type: SignatureValidatorType,
+        validator_type: str,
         body: bytes,
         headers: Dict[str, str],
         secret: str,
@@ -96,10 +94,13 @@ class SignatureValidator:
             bool: 簽名是否有效
         """
 
+        # 對於 none 策略或未知策略（預設為 none），直接返回 True
+        if validator_type == "none" or validator_type not in self._strategies:
+            logger.debug(f"使用無驗證策略，跳過簽名驗證 (validator_type: {validator_type})")
+            return True
+
         # 選擇策略
-        strategy = self._strategies.get(
-            validator_type, self._strategies[self._default_validator_type]
-        )
+        strategy = self._strategies[validator_type]
 
         # 獲取對應的簽名 header
         header_key = strategy.get_signature_header_key()

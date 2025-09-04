@@ -39,7 +39,7 @@ async def create_subscription(
     - 當有付款完成時，webhook 會自動發送到您的服務端點
 
     **參數說明：**
-    - `topic_id`: 要訂閱的主題 ID
+    - `topic_id`: 要訂閱的主題 ID（ULID 格式）
     - `subscriber_name`: 訂閱者名稱（便於識別）
     - `target_url`: 接收 webhook 的目標 URL
     - `is_active`: 是否啟用此訂閱
@@ -49,7 +49,7 @@ async def create_subscription(
 
 @router.get("/", response_model=SubscriptionList)
 async def list_subscriptions(
-    topic_id: Optional[int] = None,
+    topic_id: Optional[str] = None,
     is_active: Optional[bool] = None,
     skip: int = 0,
     limit: int = 100,
@@ -59,7 +59,7 @@ async def list_subscriptions(
     列出所有訂閱
 
     **過濾選項：**
-    - `topic_id`: 只顯示特定主題的訂閱
+    - `topic_id`: 只顯示特定主題的訂閱（ULID 格式）
     - `is_active`: 只顯示啟用/停用的訂閱
     - `skip`, `limit`: 分頁參數
     """
@@ -70,7 +70,7 @@ async def list_subscriptions(
 
 @router.get("/{subscription_id}", response_model=SubscriptionResponse)
 async def get_subscription(
-    subscription_id: int, db: AsyncSession = Depends(get_authenticated_db)
+    subscription_id: str, db: AsyncSession = Depends(get_authenticated_db)
 ) -> SubscriptionResponse:
     """獲取特定訂閱的詳細信息"""
     return await subscription_service.get_subscription_by_id(db, subscription_id)
@@ -78,7 +78,7 @@ async def get_subscription(
 
 @router.put("/{subscription_id}", response_model=SubscriptionResponse)
 async def update_subscription(
-    subscription_id: int,
+    subscription_id: str,
     subscription_update: SubscriptionUpdate,
     db: AsyncSession = Depends(get_authenticated_db),
 ) -> SubscriptionResponse:
@@ -94,7 +94,7 @@ async def update_subscription(
 
 @router.delete("/{subscription_id}")
 async def deactivate_subscription(
-    subscription_id: int, db: AsyncSession = Depends(get_authenticated_db)
+    subscription_id: str, db: AsyncSession = Depends(get_authenticated_db)
 ) -> dict:
     """
     停用訂閱（軟刪除）
@@ -107,7 +107,7 @@ async def deactivate_subscription(
 
 @router.post("/{subscription_id}/activate")
 async def activate_subscription(
-    subscription_id: int, db: AsyncSession = Depends(get_authenticated_db)
+    subscription_id: str, db: AsyncSession = Depends(get_authenticated_db)
 ) -> dict:
     """重新啟用已停用的訂閱"""
     return await subscription_service.activate_subscription(db, subscription_id)

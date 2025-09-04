@@ -58,7 +58,7 @@ class SubscriptionService:
     async def get_subscriptions(
         self,
         db: AsyncSession,
-        topic_id: Optional[int] = None,
+        topic_id: Optional[str] = None,
         is_active: Optional[bool] = None,
         skip: int = 0,
         limit: int = 100,
@@ -107,7 +107,7 @@ class SubscriptionService:
         )
 
     async def get_subscription_by_id(
-        self, db: AsyncSession, subscription_id: int
+        self, db: AsyncSession, subscription_id: str
     ) -> SubscriptionResponse:
         """
         根據 ID 獲取訂閱
@@ -128,7 +128,7 @@ class SubscriptionService:
     async def update_subscription(
         self,
         db: AsyncSession,
-        subscription_id: int,
+        subscription_id: str,
         subscription_data: SubscriptionUpdate,
     ) -> SubscriptionResponse:
         """
@@ -160,7 +160,7 @@ class SubscriptionService:
         return SubscriptionResponse.model_validate(db_subscription)
 
     async def deactivate_subscription(
-        self, db: AsyncSession, subscription_id: int
+        self, db: AsyncSession, subscription_id: str
     ) -> dict:
         """
         停用訂閱（軟刪除）
@@ -184,7 +184,7 @@ class SubscriptionService:
         return {"message": f"訂閱 {subscription_id} 已成功停用"}
 
     async def activate_subscription(
-        self, db: AsyncSession, subscription_id: int
+        self, db: AsyncSession, subscription_id: str
     ) -> dict:
         """
         啟用訂閱
@@ -206,7 +206,7 @@ class SubscriptionService:
         return {"message": f"訂閱 {subscription_id} 已成功啟用"}
 
     # 私有方法
-    async def _validate_topic_exists(self, topic_id: int, db: AsyncSession) -> None:
+    async def _validate_topic_exists(self, topic_id: str, db: AsyncSession) -> None:
         """驗證主題是否存在"""
         topic_result = await db.execute(select(Topic).where(Topic.id == topic_id))
         if not topic_result.scalar_one_or_none():
@@ -216,7 +216,7 @@ class SubscriptionService:
             )
 
     async def _get_subscription_or_404(
-        self, subscription_id: int, db: AsyncSession
+        self, subscription_id: str, db: AsyncSession
     ) -> Subscription:
         """獲取訂閱或拋出 404 錯誤"""
         result = await db.execute(

@@ -163,42 +163,42 @@ class TestSchemaIntegration:
         valid_source = SourceCreate(
             name="github",
             secret="secret123",
-            signature_validator=SignatureValidatorType.GITHUB
+            signature_validator="github"
         )
         assert valid_source.name == "github"
-        assert valid_source.signature_validator == SignatureValidatorType.GITHUB
+        assert valid_source.signature_validator == "github"
 
         # 預設 signature_validator
         default_source = SourceCreate(name="custom", secret="secret123")
-        assert default_source.signature_validator == SignatureValidatorType.GENERIC
+        assert default_source.signature_validator == "none"
 
-        # 無效的來源名稱
-        with pytest.raises(ValueError):
-            SourceCreate(name="GitHub", secret="secret123")
+        # 現在名稱沒有限制，所以不會報錯
+        valid_source_with_caps = SourceCreate(name="GitHub", secret="secret123")
+        assert valid_source_with_caps.name == "GitHub"
 
     def test_topic_schema_validation(self):
         """測試主題 schema 驗證"""
         from app.schemas.topic import TopicCreate, TopicUpdate
 
         # 有效的主題
-        valid_topic = TopicCreate(name="push", source_id=1)
+        valid_topic = TopicCreate(name="push", source_id="01ARZ3NDEKTSV4RRFFQ69G5FAV")
         assert valid_topic.name == "push"
 
-        # 無效的主題名稱 - 包含點號
-        with pytest.raises(ValueError):
-            TopicCreate(name="github.push", source_id=1)
+        # 現在名稱沒有限制，點號是允許的
+        valid_topic_with_dot = TopicCreate(name="github.push", source_id="01ARZ3NDEKTSV4RRFFQ69G5FAV")
+        assert valid_topic_with_dot.name == "github.push"
 
-        # 無效的主題名稱 - 大寫
-        with pytest.raises(ValueError):
-            TopicCreate(name="GitHub", source_id=1)
+        # 現在名稱沒有限制，大寫也是允許的
+        valid_topic_with_caps = TopicCreate(name="GitHub", source_id="01ARZ3NDEKTSV4RRFFQ69G5FAV")
+        assert valid_topic_with_caps.name == "GitHub"
 
         # 測試更新 schema
         valid_update = TopicUpdate(name="issues_opened")
         assert valid_update.name == "issues_opened"
 
-        # 更新時的無效名稱
-        with pytest.raises(ValueError):
-            TopicUpdate(name="GitHub")
+        # 現在名稱沒有限制，大寫也是允許的
+        valid_update_with_caps = TopicUpdate(name="GitHub")
+        assert valid_update_with_caps.name == "GitHub"
 
         # 更新時 name 為 None 應該是有效的（如果 schema 允許）
         valid_update_none = TopicUpdate(name=None, description="test")

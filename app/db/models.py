@@ -14,22 +14,22 @@ from sqlalchemy.orm import relationship
 import enum
 
 from app.db.base import Base
-from app.core.signature.types import SignatureValidatorType
+from app.core.ids import ulid
 
 
 class Source(Base):
     __tablename__ = "sources"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String(255), primary_key=True, index=True, default=ulid)
     name = Column(
-        String(255), unique=True, index=True, nullable=False
-    )  # e.g., "github", "stripe"
+        String(255), nullable=False
+    )  # e.g., "github", "stripe" - 移除 unique 約束和 index
     secret = Column(
         String(255), nullable=False
     )  # Secret key for HMAC signature validation
     signature_validator = Column(
-        String(50), nullable=False, default=SignatureValidatorType.GENERIC.value
-    )  # Signature validator strategy
+        String(50), nullable=False, default="none"
+    )  # Signature validator strategy - 預設為 none
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(
         DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
@@ -41,9 +41,9 @@ class Source(Base):
 class Topic(Base):
     __tablename__ = "topics"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), unique=True, index=True, nullable=False)
-    source_id = Column(Integer, ForeignKey("sources.id"), nullable=False)
+    id = Column(String(255), primary_key=True, index=True, default=ulid)
+    name = Column(String(255), nullable=False)  # 移除 unique 約束和 index
+    source_id = Column(String(255), ForeignKey("sources.id"), nullable=False)
     description = Column(Text)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(
@@ -58,8 +58,8 @@ class Topic(Base):
 class Subscription(Base):
     __tablename__ = "subscriptions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    topic_id = Column(Integer, ForeignKey("topics.id"), nullable=False)
+    id = Column(String(255), primary_key=True, index=True, default=ulid)
+    topic_id = Column(String(255), ForeignKey("topics.id"), nullable=False)
     subscriber_name = Column(
         String(255), nullable=False
     )  # Human-readable name for the subscriber service
@@ -86,8 +86,8 @@ class EventLogStatus(enum.Enum):
 class EventLog(Base):
     __tablename__ = "event_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
-    topic_id = Column(Integer, ForeignKey("topics.id"), nullable=False)
+    id = Column(String(255), primary_key=True, index=True, default=ulid)
+    topic_id = Column(String(255), ForeignKey("topics.id"), nullable=False)
     source_ip = Column(String(45))  # IPv6 support
     headers = Column(JSON)
     content_type = Column(String(255))  # Store the original Content-Type header
@@ -108,9 +108,9 @@ class DispatchLogStatus(enum.Enum):
 class DispatchLog(Base):
     __tablename__ = "dispatch_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
-    event_log_id = Column(Integer, ForeignKey("event_logs.id"), nullable=False)
-    subscription_id = Column(Integer, ForeignKey("subscriptions.id"), nullable=False)
+    id = Column(String(255), primary_key=True, index=True, default=ulid)
+    event_log_id = Column(String(255), ForeignKey("event_logs.id"), nullable=False)
+    subscription_id = Column(String(255), ForeignKey("subscriptions.id"), nullable=False)
     attempt = Column(Integer, default=1)
     status = Column(Enum(DispatchLogStatus))
     response_status_code = Column(Integer)

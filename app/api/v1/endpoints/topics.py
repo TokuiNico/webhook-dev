@@ -53,13 +53,13 @@ async def create_source(
 
     **注意：** 密鑰用於驗證 webhook 的 HMAC 簽名，確保請求來自可信的來源。
     """
-    return await source_service.create_source(db, source.name, source.secret)
+    return await source_service.create_source(db, source.name, source.secret, source.signature_validator)
 
 
 # Topic endpoints
 @router.get("/topics/", response_model=List[TopicResponse])
 async def list_topics(
-    source_id: Optional[int] = None, db: AsyncSession = Depends(get_authenticated_db)
+    source_id: Optional[str] = None, db: AsyncSession = Depends(get_authenticated_db)
 ) -> List[dict]:
     """
     列出所有主題
@@ -74,13 +74,18 @@ async def list_topics(
     - `stripe.payment.failed`: Stripe 付款失敗事件
 
     **工作流程：**
-    1. 外部服務發送 webhook 到 `/ingest/{source_name}/{topic_name}`
-    2. 系統驗證來源並識別主題
+    1. 外部服務發送 webhook 到 `/ingest/{topic_id}`
+    2. 系統根據主題 ID 識別主題和來源
     3. 查找該主題的所有訂閱者
     4. 將事件異步分發給所有訂閱者
 
     **參數：**
-    - `source_id`: 可選，只顯示特定來源的主題
+    - `source_id`: 可選，只顯示特定來源的主題（ULID 格式）
+
+    **重要更新：**
+    - 現在使用 ULID 格式的 ID 而非數字
+    - ingest URL 格式已改為 `/ingest/{topic_id}`
+    - 每個主題回應都包含 `ingest_url` 欄位
     """
     return await topic_service.get_topics(db, source_id)
 
@@ -98,7 +103,7 @@ async def create_topic(
     ```json
     {
         "name": "github.push",
-        "source_id": 1,
+        "source_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
         "description": "GitHub 代碼推送事件"
     }
     ```
@@ -115,7 +120,7 @@ async def create_topic(
 
 @router.get("/topics/{topic_id}", response_model=TopicResponse)
 async def get_topic(
-    topic_id: int, db: AsyncSession = Depends(get_authenticated_db)
+    topic_id: str, db: AsyncSession = Depends(get_authenticated_db)
 ) -> dict:
     """獲取特定主題的詳細信息"""
     return await topic_service.get_topic_by_id(db, topic_id)
@@ -135,8 +140,8 @@ async def get_signature_validators(api_key: str = Depends(get_api_key)):
     **回應格式：**
     ```json
     {
-        "supported_sources": ["github", "stripe", "generic"],
-        "total_validators": 3,
+        "supported_sources": ["github", "none"],
+        "total_validators": 2,
         "validators": [
             {
                 "validator_type": "github",
@@ -144,6 +149,13 @@ async def get_signature_validators(api_key: str = Depends(get_api_key)):
                 "signature_header": "X-Hub-Signature-256",
                 "format": "sha256=<hmac_signature>",
                 "algorithm": "HMAC-SHA256"
+            },
+            {
+                "validator_type": "none",
+                "description": "無驗證 (開發測試用)",
+                "signature_header": "None",
+                "format": "不需要簽名",
+                "algorithm": "None"
             }
         ]
     }

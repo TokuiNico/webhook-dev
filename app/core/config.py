@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # Security settings
     API_KEY: str = "your-api-key"
 
+    # Server settings
+    DOMAIN: str = "http://localhost:8000"  # 用於生成 ingest_url，預設為本地開發
+
     # MySQL settings (for production)
     MYSQL_ROOT_PASSWORD: str = "rootpassword"
     MYSQL_DATABASE: str = "webhook_db"

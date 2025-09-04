@@ -281,6 +281,120 @@ class WebhookService:
 
         return {"message": "Webhook received and queued for processing"}
 
+    async def get_topic_by_id(self, topic_id: str, db: AsyncSession) -> Tuple[Source, Topic]:
+        """
+        通過 topic_id 獲取主題和來源
+
+        Args:
+            topic_id: 主題 ID (ULID)
+            db: 數據庫會話
+
+        Returns:
+            Tuple[Source, Topic]: 來源和主題對象
+
+        Raises:
+            HTTPException: 當主題不存在時
+        """
+        # 根據 topic_id 查詢主題
+        topic_result = await db.execute(
+            select(Topic).where(Topic.id == topic_id)
+        )
+        topic = topic_result.scalar_one_or_none()
+        if not topic:
+            logger.warning(f"❌ 未知主題 ID: {topic_id}")
+            raise HTTPException(status_code=404, detail=f"主題 ID '{topic_id}' 不存在")
+
+        # 查詢關聯的來源
+        source_result = await db.execute(
+            select(Source).where(Source.id == topic.source_id)
+        )
+        source = source_result.scalar_one_or_none()
+        if not source:
+            logger.warning(f"❌ 主題 {topic_id} 的來源不存在")
+            raise HTTPException(status_code=404, detail=f"主題 '{topic_id}' 的來源不存在")
+
+        return source, topic
+
+    async def process_webhook_by_topic_id(
+        self,
+        topic_id: str,
+        body: bytes,
+        content_type: str,
+        headers: Dict[str, str],
+        source_ip: str,
+        db: AsyncSession,
+    ) -> Dict[str, str]:
+        """
+        通過 topic_id 處理 webhook 接收流程
+
+        Args:
+            topic_id: 主題 ID (ULID)
+            body: 請求體
+            content_type: 內容類型
+            headers: 請求頭
+            source_ip: 來源IP
+            db: 數據庫會話
+
+        Returns:
+            Dict[str, str]: 處理結果
+
+        Raises:
+            HTTPException: 當驗證失敗或處理錯誤時
+        """
+        logger.info(
+            f"📨 收到 webhook - 主題 ID: {topic_id}, 類型: {content_type}"
+        )
+
+        # 1. 通過 topic_id 獲取主題和來源
+        source, topic = await self.get_topic_by_id(topic_id, db)
+
+        # 2. 創建初始事件記錄
+        payload = body.decode("utf-8") if body else ""
+        event_log = await self.create_event_log(
+            topic=topic,
+            content_type=content_type,
+            payload=payload,
+            headers=headers,
+            source_ip=source_ip,
+            status=EventLogStatus.RECEIVED,
+            db=db,
+        )
+
+        # 3. 驗證簽名
+        signature_valid = self.signature_validator.validate_signature(
+            validator_type=source.signature_validator,
+            body=body,
+            headers=headers,
+            secret=str(source.secret),
+        )
+
+        if not signature_valid:
+            logger.warning(f"❌ 簽名驗證失敗: topic_id={topic_id}")
+            await self.update_event_status(
+                event_log, EventLogStatus.FAILED_VALIDATION, db
+            )
+            raise HTTPException(status_code=403, detail="Webhook 簽名驗證失敗")
+
+        # 4. 簽名驗證成功，更新狀態
+        logger.info(f"✅ 簽名驗證成功: topic_id={topic_id}")
+        await self.update_event_status(event_log, EventLogStatus.QUEUED, db)
+
+        # 5. 獲取訂閱並發布事件
+        subscriptions = await self.get_active_subscriptions(topic, db)
+
+        await self.publish_webhook_event(
+            event_log=event_log,
+            topic=topic,
+            source=source,
+            payload=payload,
+            content_type=content_type,
+            headers=headers,
+            source_ip=source_ip,
+            subscriptions=subscriptions,
+        )
+
+        return {"message": "Webhook received and queued for processing"}
+
 
 # 全局服務實例
 webhook_service = WebhookService()

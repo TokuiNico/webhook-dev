@@ -1,16 +1,13 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from app.core.signature.types import SignatureValidatorType
-from app.core.validators import NameType
-
 
 class SourceBase(BaseModel):
-    name: NameType
+    name: str  # 移除 NameType 限制，允許任意名稱
     secret: str
-    signature_validator: SignatureValidatorType = SignatureValidatorType.GENERIC
+    signature_validator: Literal["github", "none"] = "none"  # 只支援 github 和 none
 
 
 class SourceCreate(SourceBase):
@@ -20,8 +17,8 @@ class SourceCreate(SourceBase):
 class SourceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: str  # 改為 str 支援 ULID
     name: str
-    signature_validator: SignatureValidatorType
+    signature_validator: str
     created_at: datetime
     updated_at: Optional[datetime] = None

@@ -15,10 +15,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/{source_name}/{topic_name}")
+@router.post("/{topic_id}")
 async def receive_webhook(
-    source_name: str,
-    topic_name: str,
+    topic_id: str,
     request: Request,
     db: AsyncSession = Depends(get_async_db),
 ):
@@ -29,8 +28,7 @@ async def receive_webhook(
     自動處理開發/生產模式的消息分發
 
     Args:
-        source_name: 來源名稱 (如: github, stripe)
-        topic_name: 主題名稱 (如: push, payment.succeeded)
+        topic_id: 主題 ID (ULID 格式)
         request: FastAPI 請求對象
         db: 數據庫會話
 
@@ -44,9 +42,8 @@ async def receive_webhook(
         headers = dict(request.headers)
 
         # 委託給服務層處理
-        result = await webhook_service.process_webhook(
-            source_name=source_name,
-            topic_name=topic_name,
+        result = await webhook_service.process_webhook_by_topic_id(
+            topic_id=topic_id,
             body=await request.body(),
             content_type=content_type,
             headers=headers,
