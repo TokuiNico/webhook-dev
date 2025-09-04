@@ -7,19 +7,18 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 
-from app.api.v1.deps import get_authenticated_db
+from app.api.v1.deps import get_authenticated_db, get_api_key
 from app.services.topic_service import source_service, topic_service
 from app.services.webhook_service import webhook_service
 from app.schemas.topic import TopicCreate, TopicResponse
 from app.schemas.source import SourceCreate, SourceResponse
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_api_key)])
+
 
 # Source endpoints
 @router.get("/sources/", response_model=List[SourceResponse])
-async def list_sources(
-    db: AsyncSession = Depends(get_authenticated_db)
-) -> List[dict]:
+async def list_sources(db: AsyncSession = Depends(get_authenticated_db)) -> List[dict]:
     """
     列出所有 Webhook 來源
 
@@ -34,10 +33,12 @@ async def list_sources(
     """
     return await source_service.get_sources(db)
 
-@router.post("/sources/", response_model=SourceResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/sources/", response_model=SourceResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_source(
-    source: SourceCreate,
-    db: AsyncSession = Depends(get_authenticated_db)
+    source: SourceCreate, db: AsyncSession = Depends(get_authenticated_db)
 ) -> dict:
     """
     創建新的 Webhook 來源
@@ -54,11 +55,11 @@ async def create_source(
     """
     return await source_service.create_source(source.name, source.secret, db)
 
+
 # Topic endpoints
 @router.get("/topics/", response_model=List[TopicResponse])
 async def list_topics(
-    source_id: Optional[int] = None,
-    db: AsyncSession = Depends(get_authenticated_db)
+    source_id: Optional[int] = None, db: AsyncSession = Depends(get_authenticated_db)
 ) -> List[dict]:
     """
     列出所有主題
@@ -83,10 +84,12 @@ async def list_topics(
     """
     return await topic_service.get_topics(db, source_id)
 
-@router.post("/topics/", response_model=TopicResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/topics/", response_model=TopicResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_topic(
-    topic: TopicCreate,
-    db: AsyncSession = Depends(get_authenticated_db)
+    topic: TopicCreate, db: AsyncSession = Depends(get_authenticated_db)
 ) -> dict:
     """
     創建新的主題
@@ -109,17 +112,18 @@ async def create_topic(
         topic.name, topic.source_id, db, topic.description or ""
     )
 
+
 @router.get("/topics/{topic_id}", response_model=TopicResponse)
 async def get_topic(
-    topic_id: int,
-    db: AsyncSession = Depends(get_authenticated_db)
+    topic_id: int, db: AsyncSession = Depends(get_authenticated_db)
 ) -> dict:
     """獲取特定主題的詳細信息"""
     return await topic_service.get_topic_by_id(topic_id, db)
 
+
 # Signature validators info endpoint
 @router.get("/signature-validators/")
-async def get_signature_validators():
+async def get_signature_validators(api_key: str = Depends(get_api_key)):
     """
     獲取系統支援的簽名驗證器資訊
 
@@ -158,5 +162,5 @@ async def get_signature_validators():
     return {
         "supported_sources": supported_sources,
         "total_validators": len(validators),
-        "validators": validators
+        "validators": validators,
     }

@@ -7,21 +7,23 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
-from app.api.v1.deps import get_authenticated_db
+from app.api.v1.deps import get_authenticated_db, get_api_key
 from app.services.subscription_service import subscription_service
 from app.schemas.subscription import (
     SubscriptionCreate,
     SubscriptionResponse,
     SubscriptionUpdate,
-    SubscriptionList
+    SubscriptionList,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_api_key)])
 
-@router.post("/", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_subscription(
-    subscription: SubscriptionCreate,
-    db: AsyncSession = Depends(get_authenticated_db)
+    subscription: SubscriptionCreate, db: AsyncSession = Depends(get_authenticated_db)
 ) -> SubscriptionResponse:
     """
     創建新的訂閱
@@ -44,13 +46,14 @@ async def create_subscription(
     """
     return await subscription_service.create_subscription(subscription, db)
 
+
 @router.get("/", response_model=SubscriptionList)
 async def list_subscriptions(
     topic_id: Optional[int] = None,
     is_active: Optional[bool] = None,
     skip: int = 0,
     limit: int = 100,
-    db: AsyncSession = Depends(get_authenticated_db)
+    db: AsyncSession = Depends(get_authenticated_db),
 ) -> SubscriptionList:
     """
     列出所有訂閱
@@ -61,26 +64,23 @@ async def list_subscriptions(
     - `skip`, `limit`: 分頁參數
     """
     return await subscription_service.get_subscriptions(
-        db=db,
-        topic_id=topic_id,
-        is_active=is_active,
-        skip=skip,
-        limit=limit
+        db=db, topic_id=topic_id, is_active=is_active, skip=skip, limit=limit
     )
+
 
 @router.get("/{subscription_id}", response_model=SubscriptionResponse)
 async def get_subscription(
-    subscription_id: int,
-    db: AsyncSession = Depends(get_authenticated_db)
+    subscription_id: int, db: AsyncSession = Depends(get_authenticated_db)
 ) -> SubscriptionResponse:
     """獲取特定訂閱的詳細信息"""
     return await subscription_service.get_subscription_by_id(subscription_id, db)
+
 
 @router.put("/{subscription_id}", response_model=SubscriptionResponse)
 async def update_subscription(
     subscription_id: int,
     subscription_update: SubscriptionUpdate,
-    db: AsyncSession = Depends(get_authenticated_db)
+    db: AsyncSession = Depends(get_authenticated_db),
 ) -> SubscriptionResponse:
     """
     更新訂閱設定
@@ -91,10 +91,10 @@ async def update_subscription(
         subscription_id, subscription_update, db
     )
 
+
 @router.delete("/{subscription_id}")
 async def deactivate_subscription(
-    subscription_id: int,
-    db: AsyncSession = Depends(get_authenticated_db)
+    subscription_id: int, db: AsyncSession = Depends(get_authenticated_db)
 ) -> dict:
     """
     停用訂閱（軟刪除）
@@ -104,10 +104,10 @@ async def deactivate_subscription(
     """
     return await subscription_service.deactivate_subscription(subscription_id, db)
 
+
 @router.post("/{subscription_id}/activate")
 async def activate_subscription(
-    subscription_id: int,
-    db: AsyncSession = Depends(get_authenticated_db)
+    subscription_id: int, db: AsyncSession = Depends(get_authenticated_db)
 ) -> dict:
     """重新啟用已停用的訂閱"""
     return await subscription_service.activate_subscription(subscription_id, db)

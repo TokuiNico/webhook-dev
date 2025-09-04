@@ -7,14 +7,15 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any
 
-from app.api.v1.deps import get_authenticated_db
+from app.api.v1.deps import get_authenticated_db, get_api_key
 from app.services.stats_service import stats_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_api_key)])
+
 
 @router.get("/overview")
 async def get_overview_stats(
-    db: AsyncSession = Depends(get_authenticated_db)
+    db: AsyncSession = Depends(get_authenticated_db),
 ) -> Dict[str, Any]:
     """
     獲取系統總覽統計
@@ -31,10 +32,10 @@ async def get_overview_stats(
     """
     return await stats_service.get_overview_stats(db)
 
+
 @router.get("/activity")
 async def get_activity_stats(
-    days: int = 7,
-    db: AsyncSession = Depends(get_authenticated_db)
+    days: int = 7, db: AsyncSession = Depends(get_authenticated_db)
 ) -> Dict[str, Any]:
     """
     獲取活動統計數據
@@ -50,9 +51,10 @@ async def get_activity_stats(
     """
     return await stats_service.get_activity_stats(days, db)
 
+
 @router.get("/sources")
 async def get_source_stats(
-    db: AsyncSession = Depends(get_authenticated_db)
+    db: AsyncSession = Depends(get_authenticated_db),
 ) -> Dict[str, Any]:
     """
     獲取按來源分組的統計數據
