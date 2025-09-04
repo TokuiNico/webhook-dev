@@ -8,19 +8,19 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import get_async_db
-from app.core.security import get_webhook_body_and_signature
 from app.services.webhook_service import webhook_service
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+
 @router.post("/{source_name}/{topic_name}")
 async def receive_webhook(
     source_name: str,
     topic_name: str,
     request: Request,
-    db: AsyncSession = Depends(get_async_db)
+    db: AsyncSession = Depends(get_async_db),
 ):
     """
     接收來自外部服務的 webhook
@@ -51,24 +51,18 @@ async def receive_webhook(
             content_type=content_type,
             headers=headers,
             source_ip=client_ip,
-            db=db
+            db=db,
         )
 
-        return JSONResponse(
-            status_code=202,
-            content=result
-        )
+        return JSONResponse(status_code=202, content=result)
 
     except Exception as e:
         logger.error(f"處理 webhook 時發生錯誤: {e}")
         # 重新拋出異常，讓 FastAPI 處理 HTTP 異常
         raise
 
+
 @router.get("/health")
 async def health_check():
     """健康檢查端點"""
-    return {
-        "status": "healthy",
-        "service": "webhook-gateway",
-        "version": "2.0"
-    }
+    return {"status": "healthy", "service": "webhook-gateway", "version": "2.0"}

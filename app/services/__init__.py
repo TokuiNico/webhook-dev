@@ -13,5 +13,5 @@ __all__ = [
     "topic_service",
     "source_service",
     "stats_service",
-    "webhook_service"
+    "webhook_service",
 ]

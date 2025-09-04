@@ -46,7 +46,9 @@ class SourceService:
             )
 
         # 創建新來源
-        db_source = Source(name=name, secret=secret, signature_validator=signature_validator.value)
+        db_source = Source(
+            name=name, secret=secret, signature_validator=signature_validator.value
+        )
         db.add(db_source)
         await db.commit()
         await db.refresh(db_source)
@@ -118,7 +120,6 @@ class TopicService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"主題名稱 '{name}' 已存在",
             )
-
 
         # 創建新主題
         db_topic = Topic(name=name, source_id=source_id, description=description)

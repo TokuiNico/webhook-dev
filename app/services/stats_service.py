@@ -10,6 +10,7 @@ from sqlalchemy import select, func, and_
 
 from app.db.models import EventLog, DispatchLog, Subscription, Topic, Source
 
+
 class StatsService:
     """統計數據服務類"""
 
@@ -42,14 +43,10 @@ class StatsService:
             "total_subscriptions": stats["total_subscriptions"],
             "success_rate": stats["success_rate"],
             "recent_events": recent_events,
-            "system_status": self._determine_system_status(stats)
+            "system_status": self._determine_system_status(stats),
         }
 
-    async def get_activity_stats(
-        self,
-        days: int,
-        db: AsyncSession
-    ) -> Dict[str, Any]:
+    async def get_activity_stats(self, days: int, db: AsyncSession) -> Dict[str, Any]:
         """
         獲取活動統計數據
 
@@ -72,7 +69,7 @@ class StatsService:
         return {
             "daily_activity": daily_activity,
             "hourly_activity": hourly_activity,
-            "period_days": days
+            "period_days": days,
         }
 
     async def get_source_stats(self, db: AsyncSession) -> Dict[str, Any]:
@@ -89,10 +86,8 @@ class StatsService:
         source_stats_result = await db.execute(
             select(
                 Source.name,
-                func.count(EventLog.id).label('webhook_count'),
-                func.count(
-                    func.distinct(Topic.id)
-                ).label('topic_count')
+                func.count(EventLog.id).label("webhook_count"),
+                func.count(func.distinct(Topic.id)).label("topic_count"),
             )
             .join(Topic, Source.id == Topic.source_id)
             .outerjoin(EventLog, Topic.id == EventLog.topic_id)
@@ -104,7 +99,7 @@ class StatsService:
             {
                 "source": row.name,
                 "webhook_count": row.webhook_count,
-                "topic_count": row.topic_count
+                "topic_count": row.topic_count,
             }
             for row in source_stats_result.all()
         ]
@@ -113,40 +108,29 @@ class StatsService:
 
     # 私有方法
     async def _execute_parallel_queries(
-        self,
-        db: AsyncSession,
-        today_start: datetime,
-        week_start: datetime
+        self, db: AsyncSession, today_start: datetime, week_start: datetime
     ) -> Dict[str, Any]:
         """執行並行統計查詢"""
 
         # 總 webhook 數
-        total_webhooks_result = await db.execute(
-            select(func.count(EventLog.id))
-        )
+        total_webhooks_result = await db.execute(select(func.count(EventLog.id)))
         total_webhooks = total_webhooks_result.scalar() or 0
 
         # 今日 webhook 數
         today_webhooks_result = await db.execute(
-            select(func.count(EventLog.id)).where(
-                EventLog.received_at >= today_start
-            )
+            select(func.count(EventLog.id)).where(EventLog.received_at >= today_start)
         )
         today_webhooks = today_webhooks_result.scalar() or 0
 
         # 本週 webhook 數
         week_webhooks_result = await db.execute(
-            select(func.count(EventLog.id)).where(
-                EventLog.received_at >= week_start
-            )
+            select(func.count(EventLog.id)).where(EventLog.received_at >= week_start)
         )
         week_webhooks = week_webhooks_result.scalar() or 0
 
         # 活躍訂閱數
         active_subscriptions_result = await db.execute(
-            select(func.count(Subscription.id)).where(
-                Subscription.is_active == True
-            )
+            select(func.count(Subscription.id)).where(Subscription.is_active)
         )
         active_subscriptions = active_subscriptions_result.scalar() or 0
 
@@ -165,13 +149,11 @@ class StatsService:
             "week_webhooks": week_webhooks,
             "active_subscriptions": active_subscriptions,
             "total_subscriptions": total_subscriptions,
-            "success_rate": success_rate
+            "success_rate": success_rate,
         }
 
     async def _calculate_success_rate(
-        self,
-        db: AsyncSession,
-        today_start: datetime
+        self, db: AsyncSession, today_start: datetime
     ) -> float:
         """計算成功率"""
 
@@ -179,7 +161,7 @@ class StatsService:
             select(func.count(DispatchLog.id)).where(
                 and_(
                     DispatchLog.dispatched_at >= today_start,
-                    DispatchLog.status == "success"
+                    DispatchLog.status == "success",
                 )
             )
         )
@@ -193,8 +175,10 @@ class StatsService:
         total_dispatches = total_dispatches_result.scalar() or 0
 
         return round(
-            (successful_dispatches / total_dispatches * 100) if total_dispatches > 0 else 0,
-            2
+            (successful_dispatches / total_dispatches * 100)
+            if total_dispatches > 0
+            else 0,
+            2,
         )
 
     async def _get_recent_events(self, db: AsyncSession) -> List[Dict[str, Any]]:
@@ -215,22 +199,20 @@ class StatsService:
                 "topic": topic.name,
                 "status": event.status.value,
                 "received_at": event.received_at.isoformat(),
-                "content_type": event.content_type
+                "content_type": event.content_type,
             }
             for event, topic, source in recent_events_result.all()
         ]
 
     async def _get_daily_activity(
-        self,
-        db: AsyncSession,
-        start_date: datetime
+        self, db: AsyncSession, start_date: datetime
     ) -> List[Dict[str, Any]]:
         """獲取每日活動統計"""
 
         daily_counts_result = await db.execute(
             select(
-                func.date(EventLog.received_at).label('date'),
-                func.count(EventLog.id).label('count')
+                func.date(EventLog.received_at).label("date"),
+                func.count(EventLog.id).label("count"),
             )
             .where(EventLog.received_at >= start_date)
             .group_by(func.date(EventLog.received_at))
@@ -238,36 +220,28 @@ class StatsService:
         )
 
         return [
-            {
-                "date": str(row.date),
-                "webhooks": row.count
-            }
+            {"date": str(row.date), "webhooks": row.count}
             for row in daily_counts_result.all()
         ]
 
     async def _get_hourly_activity(
-        self,
-        db: AsyncSession,
-        end_date: datetime
+        self, db: AsyncSession, end_date: datetime
     ) -> List[Dict[str, Any]]:
         """獲取今日每小時活動統計"""
 
         today_start = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
         hourly_counts_result = await db.execute(
             select(
-                func.extract('hour', EventLog.received_at).label('hour'),
-                func.count(EventLog.id).label('count')
+                func.extract("hour", EventLog.received_at).label("hour"),
+                func.count(EventLog.id).label("count"),
             )
             .where(EventLog.received_at >= today_start)
-            .group_by(func.extract('hour', EventLog.received_at))
-            .order_by(func.extract('hour', EventLog.received_at))
+            .group_by(func.extract("hour", EventLog.received_at))
+            .order_by(func.extract("hour", EventLog.received_at))
         )
 
         return [
-            {
-                "hour": int(row.hour),
-                "webhooks": row.count
-            }
+            {"hour": int(row.hour), "webhooks": row.count}
             for row in hourly_counts_result.all()
         ]
 
@@ -282,6 +256,7 @@ class StatsService:
             return "warning"
         else:
             return "critical"
+
 
 # 全局服務實例
 stats_service = StatsService()

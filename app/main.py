@@ -19,7 +19,6 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-
     # 啟動 TaskIQ broker（自動處理開發/生產模式）
     await taskiq_broker_manager.startup()
 
@@ -28,11 +27,12 @@ async def lifespan(app: FastAPI):
     # 關閉 TaskIQ broker
     await taskiq_broker_manager.shutdown()
 
+
 app = FastAPI(
     title="Webhook Gateway",
     description="A gateway to receive, process, and dispatch webhooks asynchronously.",
     version="0.1.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # 掛載安全中介
@@ -43,7 +43,7 @@ app.add_middleware(WebhookSecurityMiddleware)
 app.include_router(api_router, prefix="/api/v1")
 
 # 導入 TaskIQ 任務以確保註冊
-from app.taskiq import tasks as taskiq_tasks  # noqa: E402  # isort:skip
+
 
 @app.get("/")
 def read_root():
@@ -51,13 +51,15 @@ def read_root():
     return {
         "status": "ok",
         "service": "webhook-gateway",
-        "mode": taskiq_broker_manager.mode_description
+        "mode": taskiq_broker_manager.mode_description,
     }
+
 
 @app.get("/health")
 def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "service": "webhook-gateway"}
+
 
 @app.get("/metrics")
 def metrics():

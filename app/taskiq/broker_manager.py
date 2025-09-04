@@ -1,8 +1,9 @@
 """
 TaskIQ Broker Manager - 統一管理 TaskIQ broker 的開發和生產模式
 """
+
 import logging
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from taskiq import InMemoryBroker, TaskiqMiddleware
 from taskiq_aio_pika import AioPikaBroker
@@ -55,7 +56,11 @@ class TaskiqBrokerManager:
     @property
     def mode_description(self) -> str:
         """獲取模式描述"""
-        return "開發模式 (InMemoryBroker)" if self._is_development else "生產模式 (RabbitMQ)"
+        return (
+            "開發模式 (InMemoryBroker)"
+            if self._is_development
+            else "生產模式 (RabbitMQ)"
+        )
 
     async def startup(self) -> None:
         """啟動 broker"""

@@ -5,11 +5,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def verify_webhook_signature(
-    body: bytes,
-    signature: str,
-    secret: str,
-    algorithm: str = "sha256"
+    body: bytes, signature: str, secret: str, algorithm: str = "sha256"
 ) -> bool:
     """
     Verify webhook signature using HMAC.
@@ -26,9 +24,7 @@ def verify_webhook_signature(
     try:
         # Create HMAC signature
         expected_signature = hmac.new(
-            secret.encode('utf-8'),
-            body,
-            getattr(hashlib, algorithm)
+            secret.encode("utf-8"), body, getattr(hashlib, algorithm)
         ).hexdigest()
 
         # Handle different signature formats
@@ -45,6 +41,7 @@ def verify_webhook_signature(
         logger.error(f"Error verifying webhook signature: {e}")
         return False
 
+
 def verify_github_signature(body: bytes, signature: str, secret: str) -> bool:
     """
     Verify GitHub webhook signature.
@@ -58,6 +55,7 @@ def verify_github_signature(body: bytes, signature: str, secret: str) -> bool:
         bool: True if valid
     """
     return verify_webhook_signature(body, signature, secret, "sha256")
+
 
 def verify_stripe_signature(body: bytes, signature: str, secret: str) -> bool:
     """
@@ -86,6 +84,7 @@ def verify_stripe_signature(body: bytes, signature: str, secret: str) -> bool:
         logger.error(f"Error parsing Stripe signature: {e}")
         return False
 
+
 async def get_webhook_body_and_signature(request: Request):
     """
     FastAPI dependency to extract request body and signature headers.
@@ -99,7 +98,7 @@ async def get_webhook_body_and_signature(request: Request):
     signature_headers = {
         "github": request.headers.get("X-Hub-Signature-256"),
         "stripe": request.headers.get("Stripe-Signature"),
-        "generic": request.headers.get("X-Webhook-Signature")
+        "generic": request.headers.get("X-Webhook-Signature"),
     }
 
     return body, signature_headers

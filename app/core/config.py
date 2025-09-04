@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     # Database settings - SQLite for development
     DATABASE_URL: str = "sqlite+aiosqlite:///./webhook.db"
@@ -26,5 +27,6 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+
 
 settings = Settings()

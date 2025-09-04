@@ -5,7 +5,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Optional
+from typing import Dict
 from .types import SignatureValidatorType
 
 

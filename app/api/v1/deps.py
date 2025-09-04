@@ -13,6 +13,7 @@ from app.core.config import settings
 # HTTP Bearer Security
 security = HTTPBearer()
 
+
 def get_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
     """
     驗證管理 API 金鑰
@@ -32,7 +33,7 @@ def get_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)) -
     if not settings.API_KEY:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="管理 API 金鑰尚未配置，請檢查環境變數 API_KEY"
+            detail="管理 API 金鑰尚未配置，請檢查環境變數 API_KEY",
         )
 
     # 驗證 API 金鑰
@@ -45,6 +46,7 @@ def get_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)) -
 
     return credentials.credentials
 
+
 def get_current_user_id() -> str:
     """
     獲取當前用戶 ID (未來可擴展為真實的用戶認證)
@@ -55,10 +57,10 @@ def get_current_user_id() -> str:
     # 未來可以從 JWT token 中解析用戶信息
     return "system"
 
+
 # 組合依賴項，用於需要數據庫和認證的端點
 async def get_authenticated_db(
-    db: AsyncSession = Depends(get_async_db),
-    api_key: str = Depends(get_api_key)
+    db: AsyncSession = Depends(get_async_db), api_key: str = Depends(get_api_key)
 ) -> AsyncSession:
     """
     獲取已認證的數據庫會話

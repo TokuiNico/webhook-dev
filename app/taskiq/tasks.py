@@ -2,13 +2,12 @@
 TaskIQ 任務定義
 處理 webhook 分發任務
 """
-import asyncio
+
 import logging
 from datetime import datetime
 from typing import Dict, Any
 
 import httpx
-from taskiq import TaskiqMessage
 
 from app.db.models import DispatchLog, DispatchLogStatus
 from app.db.session import AsyncSessionLocal
@@ -71,20 +70,20 @@ async def send_webhook_to_subscription(
                 request_headers[header] = str(headers[header.lower()])
 
         # 添加 webhook 相關的識別頭
-        request_headers.update({
-            "X-Webhook-Source": source_name,
-            "X-Webhook-Topic": topic_name,
-            "X-Webhook-Event-Id": str(event_log_id),
-            "X-Webhook-Attempt": str(attempt),
-        })
+        request_headers.update(
+            {
+                "X-Webhook-Source": source_name,
+                "X-Webhook-Topic": topic_name,
+                "X-Webhook-Event-Id": str(event_log_id),
+                "X-Webhook-Attempt": str(attempt),
+            }
+        )
 
         # 發送 HTTP 請求
         timeout = httpx.Timeout(30.0, connect=10.0)
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
-                target_url,
-                content=payload,
-                headers=request_headers
+                target_url, content=payload, headers=request_headers
             )
 
             status_code = response.status_code
@@ -108,11 +107,15 @@ async def send_webhook_to_subscription(
         error_message = f"Request timeout: {str(e)}"
 
     except httpx.RequestError as e:
-        logger.error(f"🌐 網路錯誤發送 webhook 到 {target_url} (訂閱者: {subscriber_name}): {e}")
+        logger.error(
+            f"🌐 網路錯誤發送 webhook 到 {target_url} (訂閱者: {subscriber_name}): {e}"
+        )
         error_message = f"Network error: {str(e)}"
 
     except Exception as e:
-        logger.error(f"💥 未預期錯誤發送 webhook 到 {target_url} (訂閱者: {subscriber_name}): {e}")
+        logger.error(
+            f"💥 未預期錯誤發送 webhook 到 {target_url} (訂閱者: {subscriber_name}): {e}"
+        )
         error_message = f"Unexpected error: {str(e)}"
 
     # 記錄分發結果到數據庫
@@ -195,7 +198,9 @@ async def log_dispatch_result(
                 event_log_id=event_log_id,
                 subscription_id=subscription_id,
                 attempt=attempt,
-                status=DispatchLogStatus.SUCCESS if success else DispatchLogStatus.FAILED,
+                status=DispatchLogStatus.SUCCESS
+                if success
+                else DispatchLogStatus.FAILED,
                 response_status_code=status_code or 0,
                 response_body=response_body or error_message,
                 dispatched_at=dispatched_at or datetime.utcnow(),

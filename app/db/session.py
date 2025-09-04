@@ -10,6 +10,7 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False,
 )
 
+
 async def get_async_db():
     """Dependency to get database session"""
     async with AsyncSessionLocal() as session:
