@@ -5,7 +5,7 @@ version = "0.1.0"
 description = "A robust webhook gateway to ingest, validate, and dispatch webhooks from various sources."
 authors = [{ name = "Your Name", email = "you@example.com" }]
 
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 
 dependencies = [
     "fastapi",
