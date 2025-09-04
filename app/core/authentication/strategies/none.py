@@ -47,9 +47,11 @@ class NoneAuthStrategy(AuthenticationStrategy):
     def get_strategy_info(self) -> Dict[str, Any]:
         """返回策略詳細資訊"""
         info = super().get_strategy_info()
-        info.update({
-            "warning": "此策略不提供任何安全保護，僅用於開發環境",
-            "use_cases": ["本地開發", "測試環境", "內部網路"],
-            "security_risk": "高風險 - 不建議在生產環境使用"
-        })
+        info.update(
+            {
+                "warning": "此策略不提供任何安全保護，僅用於開發環境",
+                "use_cases": ["本地開發", "測試環境", "內部網路"],
+                "security_risk": "高風險 - 不建議在生產環境使用",
+            }
+        )
         return info

@@ -3,7 +3,7 @@
 處理事件日誌和派發日誌的業務邏輯
 """
 
-from typing import List, Optional
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func
 from fastapi import HTTPException
@@ -12,7 +12,7 @@ from app.schemas.log import (
     EventLogResponse,
     DispatchLogResponse,
     EventLogListResponse,
-    DispatchLogListResponse
+    DispatchLogListResponse,
 )
 
 
@@ -25,7 +25,7 @@ class LogService:
         topic_id: Optional[str] = None,
         status: Optional[EventLogStatus] = None,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
     ) -> EventLogListResponse:
         """
         獲取事件日誌列表
@@ -70,13 +70,11 @@ class LogService:
             items=[EventLogResponse.model_validate(event) for event in events],
             total=total,
             skip=skip,
-            limit=limit
+            limit=limit,
         )
 
     async def get_event_log_by_id(
-        self,
-        db: AsyncSession,
-        event_id: str
+        self, db: AsyncSession, event_id: str
     ) -> EventLogResponse:
         """
         根據 ID 獲取特定事件日誌
@@ -107,7 +105,7 @@ class LogService:
         subscription_id: Optional[str] = None,
         status: Optional[DispatchLogStatus] = None,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
     ) -> DispatchLogListResponse:
         """
         獲取派發日誌列表
@@ -145,23 +143,25 @@ class LogService:
         total = total_result.scalar() or 0
 
         # 加入排序和分頁
-        query = query.order_by(desc(DispatchLog.dispatched_at)).offset(skip).limit(limit)
+        query = (
+            query.order_by(desc(DispatchLog.dispatched_at)).offset(skip).limit(limit)
+        )
 
         # 執行查詢
         result = await db.execute(query)
         dispatches = result.scalars().all()
 
         return DispatchLogListResponse(
-            items=[DispatchLogResponse.model_validate(dispatch) for dispatch in dispatches],
+            items=[
+                DispatchLogResponse.model_validate(dispatch) for dispatch in dispatches
+            ],
             total=total,
             skip=skip,
-            limit=limit
+            limit=limit,
         )
 
     async def get_dispatch_log_by_id(
-        self,
-        db: AsyncSession,
-        dispatch_id: str
+        self, db: AsyncSession, dispatch_id: str
     ) -> DispatchLogResponse:
         """
         根據 ID 獲取特定派發日誌

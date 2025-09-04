@@ -10,6 +10,7 @@ from app.db.models import EventLogStatus, DispatchLogStatus
 
 class EventLogResponse(BaseModel):
     """事件日誌響應模型"""
+
     id: str
     topic_id: str
     source_ip: Optional[str] = None
@@ -25,6 +26,7 @@ class EventLogResponse(BaseModel):
 
 class DispatchLogResponse(BaseModel):
     """派發日誌響應模型"""
+
     id: str
     event_log_id: str
     subscription_id: str
@@ -40,6 +42,7 @@ class DispatchLogResponse(BaseModel):
 
 class EventLogListResponse(BaseModel):
     """事件日誌列表響應模型"""
+
     items: List[EventLogResponse]
     total: int
     skip: int
@@ -48,6 +51,7 @@ class EventLogListResponse(BaseModel):
 
 class DispatchLogListResponse(BaseModel):
     """派發日誌列表響應模型"""
+
     items: List[DispatchLogResponse]
     total: int
     skip: int

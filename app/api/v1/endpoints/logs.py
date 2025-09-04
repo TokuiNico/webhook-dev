@@ -11,7 +11,7 @@ from app.schemas.log import (
     EventLogResponse,
     DispatchLogResponse,
     EventLogListResponse,
-    DispatchLogListResponse
+    DispatchLogListResponse,
 )
 from app.services.log_service import log_service
 
@@ -57,11 +57,7 @@ async def list_event_logs(
     ```
     """
     return await log_service.get_event_logs(
-        db=db,
-        topic_id=topic_id,
-        status=status,
-        skip=skip,
-        limit=limit
+        db=db, topic_id=topic_id, status=status, skip=skip, limit=limit
     )
 
 
@@ -97,7 +93,9 @@ async def get_event_log(
 async def list_dispatch_logs(
     event_log_id: Optional[str] = Query(None, description="過濾特定事件的派發記錄"),
     subscription_id: Optional[str] = Query(None, description="過濾特定訂閱的派發記錄"),
-    status: Optional[DispatchLogStatus] = Query(None, description="過濾特定狀態的派發記錄"),
+    status: Optional[DispatchLogStatus] = Query(
+        None, description="過濾特定狀態的派發記錄"
+    ),
     skip: int = Query(0, ge=0, description="跳過的記錄數"),
     limit: int = Query(100, ge=1, le=1000, description="返回的記錄數"),
     db: AsyncSession = Depends(get_authenticated_db),
@@ -140,7 +138,7 @@ async def list_dispatch_logs(
         subscription_id=subscription_id,
         status=status,
         skip=skip,
-        limit=limit
+        limit=limit,
     )
 
 

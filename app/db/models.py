@@ -113,7 +113,9 @@ class DispatchLog(Base):
 
     id = Column(String(255), primary_key=True, index=True, default=ulid)
     event_log_id = Column(String(255), ForeignKey("event_logs.id"), nullable=False)
-    subscription_id = Column(String(255), ForeignKey("subscriptions.id"), nullable=False)
+    subscription_id = Column(
+        String(255), ForeignKey("subscriptions.id"), nullable=False
+    )
     attempt = Column(Integer, default=1)
     status = Column(Enum(DispatchLogStatus))
     response_status_code = Column(Integer)

@@ -64,7 +64,9 @@ class SignatureAuthStrategy(AuthenticationStrategy):
             self.logger.error(f"❌ 簽名驗證異常: {e}")
             return False
 
-    def _get_signature_from_headers(self, headers: Dict[str, str], header_key: str) -> str:
+    def _get_signature_from_headers(
+        self, headers: Dict[str, str], header_key: str
+    ) -> str:
         """從 headers 中獲取簽名，支援大小寫不敏感查找"""
         # 標準化 headers 為小寫鍵
         normalized_headers = {k.lower(): v for k, v in headers.items()}
@@ -87,14 +89,16 @@ class SignatureAuthStrategy(AuthenticationStrategy):
         # 處理不同的簽名格式
         prefix = format_config.get("prefix")
         if prefix and signature.startswith(prefix):
-            provided_signature = signature[len(prefix):]
+            provided_signature = signature[len(prefix) :]
         else:
             provided_signature = signature
 
         # 使用常數時間比較防止時序攻擊
         return hmac.compare_digest(expected_signature, provided_signature)
 
-    def _verify_stripe_signature(self, body: bytes, signature: str, secret: str) -> bool:
+    def _verify_stripe_signature(
+        self, body: bytes, signature: str, secret: str
+    ) -> bool:
         """驗證 Stripe 簽名格式"""
         # Stripe 簽名格式: t=timestamp,v1=signature[,v0=old_signature]
         elements = {}
@@ -114,9 +118,7 @@ class SignatureAuthStrategy(AuthenticationStrategy):
 
         # 計算預期簽名
         expected_signature = hmac.new(
-            secret.encode("utf-8"),
-            payload.encode("utf-8"),
-            hashlib.sha256
+            secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256
         ).hexdigest()
 
         return hmac.compare_digest(expected_signature, signature_hash)

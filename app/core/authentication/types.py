@@ -54,14 +54,18 @@ class AuthenticationType(StrEnum):
 
 class SignatureConfig(BaseModel):
     """簽名驗證配置"""
+
     secret: str = Field(..., description="HMAC 密鑰")
     algorithm: str = Field(default="sha256", description="雜湊算法")
     header_key: str = Field(default="X-Webhook-Signature", description="簽名 header 鍵")
-    format_type: str = Field(default="generic", description="簽名格式 (github/stripe/generic)")
+    format_type: str = Field(
+        default="generic", description="簽名格式 (github/stripe/generic)"
+    )
 
 
 class AuthenticationConfig(BaseModel):
     """通用認證配置模型"""
+
     auth_type: AuthenticationType = Field(..., description="認證類型")
 
     # 簽名驗證配置

@@ -98,7 +98,7 @@ class AuthenticationResult:
         success: bool,
         auth_type: AuthenticationType,
         message: str = "",
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         self.success = success
         self.auth_type = auth_type

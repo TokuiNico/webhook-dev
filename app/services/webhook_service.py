@@ -260,10 +260,14 @@ class WebhookService:
             await self.update_event_status(
                 event_log, EventLogStatus.FAILED_VALIDATION, db
             )
-            raise HTTPException(status_code=403, detail=f"Webhook 認證失敗: {auth_result.message}")
+            raise HTTPException(
+                status_code=403, detail=f"Webhook 認證失敗: {auth_result.message}"
+            )
 
         # 4. 認證驗證成功，更新狀態
-        logger.info(f"✅ 認證驗證成功: {source_name}/{topic_name} - {auth_result.message}")
+        logger.info(
+            f"✅ 認證驗證成功: {source_name}/{topic_name} - {auth_result.message}"
+        )
         await self.update_event_status(event_log, EventLogStatus.QUEUED, db)
 
         # 5. 獲取訂閱並發布事件
@@ -313,7 +317,9 @@ class WebhookService:
 
         return config
 
-    async def get_topic_by_id(self, topic_id: str, db: AsyncSession) -> Tuple[Source, Topic]:
+    async def get_topic_by_id(
+        self, topic_id: str, db: AsyncSession
+    ) -> Tuple[Source, Topic]:
         """
         通過 topic_id 獲取主題和來源
 
@@ -328,9 +334,7 @@ class WebhookService:
             HTTPException: 當主題不存在時
         """
         # 根據 topic_id 查詢主題
-        topic_result = await db.execute(
-            select(Topic).where(Topic.id == topic_id)
-        )
+        topic_result = await db.execute(select(Topic).where(Topic.id == topic_id))
         topic = topic_result.scalar_one_or_none()
         if not topic:
             logger.warning(f"❌ 未知主題 ID: {topic_id}")
@@ -343,7 +347,9 @@ class WebhookService:
         source = source_result.scalar_one_or_none()
         if not source:
             logger.warning(f"❌ 主題 {topic_id} 的來源不存在")
-            raise HTTPException(status_code=404, detail=f"主題 '{topic_id}' 的來源不存在")
+            raise HTTPException(
+                status_code=404, detail=f"主題 '{topic_id}' 的來源不存在"
+            )
 
         return source, topic
 
@@ -373,9 +379,7 @@ class WebhookService:
         Raises:
             HTTPException: 當驗證失敗或處理錯誤時
         """
-        logger.info(
-            f"📨 收到 webhook - 主題 ID: {topic_id}, 類型: {content_type}"
-        )
+        logger.info(f"📨 收到 webhook - 主題 ID: {topic_id}, 類型: {content_type}")
 
         # 1. 通過 topic_id 獲取主題和來源
         source, topic = await self.get_topic_by_id(topic_id, db)
@@ -403,11 +407,15 @@ class WebhookService:
         )
 
         if not auth_result.success:
-            logger.warning(f"❌ 認證驗證失敗: topic_id={topic_id} - {auth_result.message}")
+            logger.warning(
+                f"❌ 認證驗證失敗: topic_id={topic_id} - {auth_result.message}"
+            )
             await self.update_event_status(
                 event_log, EventLogStatus.FAILED_VALIDATION, db
             )
-            raise HTTPException(status_code=403, detail=f"Webhook 認證失敗: {auth_result.message}")
+            raise HTTPException(
+                status_code=403, detail=f"Webhook 認證失敗: {auth_result.message}"
+            )
 
         # 4. 認證驗證成功，更新狀態
         logger.info(f"✅ 認證驗證成功: topic_id={topic_id} - {auth_result.message}")

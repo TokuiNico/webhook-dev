@@ -58,7 +58,7 @@ async def create_source(
         name=source.name,
         secret=source.secret,
         auth_type=source.auth_type,
-        auth_config=source.auth_config
+        auth_config=source.auth_config,
     )
 
 

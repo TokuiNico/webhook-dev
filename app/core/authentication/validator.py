@@ -29,7 +29,9 @@ class AuthenticationValidator:
         # 預設策略
         self._default_auth_type = AuthenticationType.NONE.value
 
-    def register_strategy(self, auth_type: str, strategy: AuthenticationStrategy) -> None:
+    def register_strategy(
+        self, auth_type: str, strategy: AuthenticationStrategy
+    ) -> None:
         """註冊新的認證策略
 
         Args:
@@ -76,9 +78,7 @@ class AuthenticationValidator:
             if auth_type != "none":
                 logger.warning(f"⚠️ 未知認證類型: {auth_type}，使用無驗證策略")
             return AuthenticationResult(
-                success=True,
-                auth_type=AuthenticationType.NONE,
-                message="無驗證策略"
+                success=True, auth_type=AuthenticationType.NONE, message="無驗證策略"
             )
 
         # 選擇策略
@@ -99,7 +99,7 @@ class AuthenticationValidator:
                 success=success,
                 auth_type=auth_type_enum,
                 message=message,
-                details={"strategy": auth_type, "config_provided": bool(config)}
+                details={"strategy": auth_type, "config_provided": bool(config)},
             )
 
         except Exception as e:
@@ -109,5 +109,5 @@ class AuthenticationValidator:
                 success=False,
                 auth_type=auth_type_enum,
                 message=error_msg,
-                details={"error": str(e), "strategy": auth_type}
+                details={"error": str(e), "strategy": auth_type},
             )
