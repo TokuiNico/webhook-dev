@@ -33,7 +33,7 @@ Authorization: Bearer $API_KEY
 
 **參數：**
 - `source_name` - 來源名稱 (如: github, stripe)
-- `topic_name` - 主題名稱 (如: push, payment_success)
+- `topic_name` - 主題名稱 (如: push, payment_succeeded)
 
 **標頭：**
 - `Content-Type` - 支援 JSON, XML, form-data
@@ -196,6 +196,31 @@ curl -H "Authorization: Bearer your-api-key" \
 
 創建新的 webhook 來源。
 
+**請求體：**
+```json
+{
+  "name": "github",
+  "secret": "your-webhook-secret",
+  "signature_validator": "github"
+}
+```
+
+**名稱格式要求：**
+- 只能包含小寫英文字母 (a-z)
+- 數字 (0-9)
+- 連字號 (-)
+- 底線 (_)
+- 長度：1-255 字符
+
+**簽名驗證器類型：**
+- `github` - 用於 GitHub webhooks (X-Hub-Signature-256 header)
+- `stripe` - 用於 Stripe webhooks (Stripe-Signature header)
+- `generic` - 通用 HMAC-SHA256 驗證（預設，X-Webhook-Signature header）
+
+**回應：**
+- `201 Created` - 來源創建成功
+- `400 Bad Request` - 名稱格式無效或來源已存在
+
 ### GET `/api/v1/manage/topics/`
 
 列出所有主題。
@@ -203,6 +228,28 @@ curl -H "Authorization: Bearer your-api-key" \
 ### POST `/api/v1/manage/topics/`
 
 創建新主題。
+
+**請求體：**
+```json
+{
+  "name": "push",
+  "source_id": 1,
+  "description": "Git push events"
+}
+```
+
+**名稱格式要求：**
+- 只能包含小寫英文字母 (a-z)
+- 數字 (0-9)
+- 連字號 (-)
+- 底線 (_)
+- 長度：1-255 字符
+- 格式建議：使用描述性名稱 (如: `push`, `payment_succeeded`, `user_created`)
+
+**回應：**
+- `201 Created` - 主題創建成功
+- `400 Bad Request` - 名稱格式無效或主題已存在
+- `404 Not Found` - 指定的來源不存在
 
 ### GET `/api/v1/manage/topics/{topic_id}`
 
@@ -235,7 +282,7 @@ Prometheus 指標（純文字輸出，無需認證）。
 curl -X POST \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
-  -d '{"name": "github", "secret": "github_webhook_secret"}' \
+  -d '{"name": "github", "secret": "github_webhook_secret", "signature_validator": "github"}' \
   http://127.0.0.1:8000/api/v1/manage/sources/
 
 # 創建 push 主題

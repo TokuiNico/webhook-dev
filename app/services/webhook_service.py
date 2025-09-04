@@ -12,12 +12,12 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.signature import SignatureValidator
+from app.core.signature.types import SignatureValidatorType
 from app.db.models import EventLog, EventLogStatus, Source, Subscription, Topic
 from app.stream.broker_manager import broker_manager
 from app.stream.models import SubscriptionInfo, WebhookEvent
 
 logger = logging.getLogger(__name__)
-
 
 
 class WebhookService:
@@ -154,7 +154,7 @@ class WebhookService:
                 id=sub.id,  # type: ignore
                 subscriber_name=sub.subscriber_name,  # type: ignore
                 target_url=sub.target_url,  # type: ignore
-                is_active=sub.is_active  # type: ignore
+                is_active=sub.is_active,  # type: ignore
             )
             for sub in subscriptions
         ]
@@ -173,7 +173,7 @@ class WebhookService:
             headers=normalized_headers,
             source_ip=source_ip,
             subscriptions=subscription_infos,
-            received_at=datetime.utcnow()
+            received_at=datetime.utcnow(),
         )
 
         # 發布事件到 FastStream 的 "webhook.received" 隊列
@@ -198,9 +198,7 @@ class WebhookService:
         """
         # 使用 SQLAlchemy 更新記錄
         await db.execute(
-            update(EventLog)
-            .where(EventLog.id == event_log.id)
-            .values(status=status)
+            update(EventLog).where(EventLog.id == event_log.id).values(status=status)
         )
         await db.commit()
 
@@ -257,7 +255,7 @@ class WebhookService:
 
         # 3. 驗證簽名
         signature_valid = self.signature_validator.validate_signature(
-            source_name=source_name,
+            validator_type=SignatureValidatorType(source.signature_validator),
             body=body,
             signature_headers=signature_headers,
             secret=str(source.secret),

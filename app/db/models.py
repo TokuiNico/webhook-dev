@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 import enum
 
 from app.db.base import Base
+from app.core.signature.types import SignatureValidatorType
 
 class Source(Base):
     __tablename__ = "sources"
@@ -11,6 +12,7 @@ class Source(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), unique=True, index=True, nullable=False)  # e.g., "github", "stripe"
     secret = Column(String(255), nullable=False)  # Secret key for HMAC signature validation
+    signature_validator = Column(String(50), nullable=False, default=SignatureValidatorType.GENERIC.value)  # Signature validator strategy
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 

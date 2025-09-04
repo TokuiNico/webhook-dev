@@ -6,7 +6,7 @@
 import logging
 from abc import ABC, abstractmethod
 from typing import Dict, Optional
-
+from .types import SignatureValidatorType
 
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ class SignatureStrategy(ABC):
     """簽名驗證策略基類"""
 
     @abstractmethod
-    def get_signature_header_key(self) -> str:
+    def get_signature_header_key(self) -> SignatureValidatorType:
         """返回該來源使用的簽名 header 鍵名"""
         pass
 
@@ -30,7 +30,7 @@ class SignatureStrategy(ABC):
         return {
             "source_type": self.get_signature_header_key(),
             "description": f"{self.get_signature_header_key()} 簽名驗證",
-            "signature_header": f"X-{self.get_signature_header_key().title()}-Signature"
+            "signature_header": f"X-{self.get_signature_header_key().title()}-Signature",
         }
 
 
@@ -39,12 +39,17 @@ class SignatureValidator:
 
     def __init__(self):
         # 延遲載入策略，避免循環引用
-        from .strategies import GitHubSignatureStrategy, StripeSignatureStrategy, GenericSignatureStrategy
+        from .strategies import (
+            GitHubSignatureStrategy,
+            StripeSignatureStrategy,
+            GenericSignatureStrategy,
+        )
+        from .types import SignatureValidatorType
 
         # 註冊核心策略
-        self._strategies: Dict[str, SignatureStrategy] = {
-            "github": GitHubSignatureStrategy(),
-            "stripe": StripeSignatureStrategy(),
+        self._strategies: Dict[SignatureValidatorType, SignatureStrategy] = {
+            SignatureValidatorType.GITHUB: GitHubSignatureStrategy(),
+            SignatureValidatorType.STRIPE: StripeSignatureStrategy(),
         }
         # 預設策略
         self._default_strategy = GenericSignatureStrategy()
@@ -56,7 +61,7 @@ class SignatureValidator:
             source_name: 來源名稱（會轉為小寫）
             strategy: 簽名驗證策略實例
         """
-        self._strategies[source_name.lower()] = strategy
+        self._strategies[SignatureValidatorType(source_name.lower())] = strategy
         logger.info(f"✅ 註冊簽名驗證策略: {source_name}")
 
     def get_supported_sources(self) -> list[str]:
@@ -72,7 +77,7 @@ class SignatureValidator:
 
     def validate_signature(
         self,
-        source_name: str,
+        validator_type: SignatureValidatorType,
         body: bytes,
         signature_headers: Dict[str, Optional[str]],
         secret: str,
@@ -81,7 +86,7 @@ class SignatureValidator:
         根據來源類型驗證簽名
 
         Args:
-            source_name: 來源名稱
+            validator_type: 驗證類型
             body: 請求體
             signature_headers: 簽名頭字典
             secret: 來源密鑰
@@ -89,27 +94,28 @@ class SignatureValidator:
         Returns:
             bool: 簽名是否有效
         """
-        source_lower = source_name.lower()
 
         # 選擇策略
-        strategy = self._strategies.get(source_lower, self._default_strategy)
+        strategy = self._strategies.get(validator_type, self._default_strategy)
 
         # 獲取對應的簽名 header
         header_key = strategy.get_signature_header_key()
         signature = signature_headers.get(header_key)
 
         if not signature:
-            logger.warning(f"❌ 缺少簽名 header: {header_key} for source: {source_name}")
+            logger.warning(
+                f"❌ 缺少簽名 header: {header_key} for source: {validator_type}"
+            )
             return False
 
         # 執行驗證
         try:
             result = strategy.verify(body, signature, secret)
             if result:
-                logger.debug(f"✅ 簽名驗證成功: {source_name}")
+                logger.debug(f"✅ 簽名驗證成功: {validator_type}")
             else:
-                logger.warning(f"❌ 簽名驗證失敗: {source_name}")
+                logger.warning(f"❌ 簽名驗證失敗: {validator_type}")
             return result
         except Exception as e:
-            logger.error(f"❌ 簽名驗證異常 {source_name}: {e}")
+            logger.error(f"❌ 簽名驗證異常 {validator_type}: {e}")
             return False

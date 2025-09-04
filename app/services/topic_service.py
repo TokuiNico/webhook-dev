@@ -9,6 +9,7 @@ from sqlalchemy import select
 from fastapi import HTTPException, status
 
 from app.db.models import Topic, Source
+from app.core.signature.types import SignatureValidatorType
 
 
 class SourceService:
@@ -19,14 +20,16 @@ class SourceService:
         db: AsyncSession,
         name: str,
         secret: str,
+        signature_validator: SignatureValidatorType = SignatureValidatorType.GENERIC,
     ) -> dict:
         """
         創建新的 Webhook 來源
 
         Args:
+            db: 數據庫會話
             name: 來源名稱（如 'github', 'stripe'）
             secret: 用於驗證的密鑰
-            db: 數據庫會話
+            signature_validator: 簽名驗證器類型（如 'github', 'stripe', 'generic'）
 
         Returns:
             dict: 創建的來源信息
@@ -43,7 +46,7 @@ class SourceService:
             )
 
         # 創建新來源
-        db_source = Source(name=name, secret=secret)
+        db_source = Source(name=name, secret=secret, signature_validator=signature_validator.value)
         db.add(db_source)
         await db.commit()
         await db.refresh(db_source)
@@ -51,6 +54,7 @@ class SourceService:
         return {
             "id": db_source.id,
             "name": db_source.name,
+            "signature_validator": db_source.signature_validator,
             "created_at": db_source.created_at.isoformat(),
         }
 
@@ -71,6 +75,7 @@ class SourceService:
             {
                 "id": source.id,
                 "name": source.name,
+                "signature_validator": source.signature_validator,
                 "created_at": source.created_at.isoformat(),
             }
             for source in sources
@@ -100,7 +105,7 @@ class TopicService:
         """
         # 驗證來源是否存在
         source_result = await db.execute(select(Source).where(Source.id == source_id))
-        if not (source := source_result.scalar_one_or_none()):
+        if not source_result.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"來源 ID {source_id} 不存在",
@@ -114,12 +119,6 @@ class TopicService:
                 detail=f"主題名稱 '{name}' 已存在",
             )
 
-        # topic name 應該要符合 source name 格式
-        if not name.startswith(f"{str(source.name)}."):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"主題名稱 '{name}' 不符合來源名稱 '{source.name}' 格式",
-            )
 
         # 創建新主題
         db_topic = Topic(name=name, source_id=source_id, description=description)
