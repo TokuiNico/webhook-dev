@@ -33,23 +33,26 @@ async def get_source_by_name(db: AsyncSession, name: str):
 ## Session Management
 ```python
 # For API endpoints
-async def get_db():
+async def get_async_db():
     async with AsyncSessionLocal() as session:
-        yield session
+        try:
+            yield session
+        finally:
+            await session.close()
 
-# For FastStream handlers
-async def log_dispatch_result(result):
+# For TaskIQ tasks
+async def log_dispatch_result(...):
     async with AsyncSessionLocal() as db:
         # ... database operations
         await db.commit()
 ```
 
 ## Environment-Specific Configuration
-- Development: SQLite with webhook.db
+- Development: SQLite with `sqlite+aiosqlite:///./webhook.db`
 - Production: MySQL with connection pooling
-- Configuration loaded from [webhook-gateway/app/core/config.py](mdc:webhook-gateway/app/core/config.py)
+- Configuration loaded from [app/core/config.py](mdc:app/core/config.py)
 
 ## Migration Strategy
 - Tables auto-created on app startup via `Base.metadata.create_all()`
-- Test data initialization via [webhook-gateway/test_setup.py](mdc:webhook-gateway/test_setup.py)
+- Test data initialization via [scripts/setup_test_data.py](mdc:scripts/setup_test_data.py)
 - No manual migrations needed for development

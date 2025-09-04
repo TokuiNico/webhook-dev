@@ -6,10 +6,10 @@ alwaysApply: false
 # Testing and Development Patterns
 
 ## Test Environment Setup
-- Run [test_setup.py](mdc:test_setup.py) before testing
-- Use SQLite database: webhook.db
-- Enable FakeRedis with `USE_FAKE_REDIS=true` in environment
-- Test APIs use `API_KEY="webhook-admin-key-123"` for consistency
+- Initialize test data with [scripts/setup_test_data.py](mdc:scripts/setup_test_data.py) if needed
+- Use SQLite database in dev: `sqlite+aiosqlite:///./webhook.db`
+- Use InMemoryBroker for TaskIQ in development (`USE_MEMORY_BROKER=true`)
+- Test APIs use `API_KEY` from environment for consistency
 
 ## Development Server Commands
 ```bash
@@ -17,32 +17,33 @@ alwaysApply: false
 uv run uvicorn app.main:app --reload
 
 # Run complete test suite
-uv run python run_all_tests.py
+uv run python -m pytest tests/ -v
 
 # Initialize test data
-uv run python test_setup.py
+uv run python scripts/setup_test_data.py
 ```
 
 ## Environment Variables for Development
 ```env
 DEVELOPMENT=true
 USE_SQLITE=true
-USE_FAKE_REDIS=true
+USE_MEMORY_BROKER=true
 DATABASE_URL=sqlite+aiosqlite:///./webhook.db
+RABBITMQ_URL=amqp://guest:guest@localhost:5672/
 API_KEY=your-api-key
 ```
 
 ## Testing Rules
 - Test files use specific API keys for consistency
-- All tests should work with SQLite + FakeRedis
-- Use [debug_webhook.py](mdc:debug_webhook.py) for webhook debugging
+- All tests should work with SQLite + InMemoryBroker
+- Use [scripts/webhook_debug.py](mdc:scripts/webhook_debug.py) for webhook debugging
 - Health check endpoint: `GET /health` (no auth required)
 
-## FastStream Testing
-- FastStream handlers run in the same process as FastAPI
-- No need to start separate worker processes
-- All event processing logs appear in main application logs
-- Use fakeredis for message queue in development
+## TaskIQ Testing
+- InMemoryBroker runs in the same process as FastAPI in development
+- No need to start separate worker processes in development
+- All task processing logs appear in main application logs
+- Use RabbitMQ in production
 
 ## Docker Testing
 - Development profile: `docker-compose --profile dev up -d`
@@ -51,6 +52,6 @@ API_KEY=your-api-key
 
 ## Common Test Scenarios
 1. Health check: `curl http://localhost:8000/health`
-2. Webhook ingestion: `POST /api/v1/ingest/{source}/{topic}`
+2. Webhook ingestion: `POST /api/v1/ingest/{topic_id}`
 3. Subscription management: CRUD operations with Bearer auth
 4. Statistics endpoints: Various metrics with authentication

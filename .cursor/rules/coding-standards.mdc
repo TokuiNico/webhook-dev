@@ -23,15 +23,16 @@ alwaysApply: false
   ```
 - Handle database exceptions with try/catch and return appropriate HTTP errors
 
-## FastStream Event Handlers
-- Import broker: `from app.stream.app import broker`
-- Use descriptive queue names: `webhook.received`, `webhook.dispatch`
-- Event handlers should be async and handle exceptions gracefully
+## TaskIQ Tasks
+- Import broker: `from app.taskiq.broker_manager import broker`
+- Define tasks with decorator: `@broker.task(task_name="...")`
+- Enqueue tasks via `await some_task.kiq(**kwargs)`
+- Tasks should be async and handle exceptions gracefully
 - Log important events with the logger: `import logging; logger = logging.getLogger(__name__)`
 
 ## Security Implementation
-- Import security functions: `from app.core.security import verify_webhook_signature`
-- Always verify HMAC signatures for incoming webhooks
+- Use authentication validator: `from app.core.authentication import AuthenticationValidator`
+- Verify HMAC signatures when `auth_type == "signature"` (formats: github/stripe/generic)
 - Use Bearer token authentication for management APIs
 - Validate all input data with Pydantic schemas
 
@@ -53,5 +54,5 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 # Local application imports
 from app.db.session import AsyncSessionLocal
-from app.stream.app import broker
+from app.taskiq.broker_manager import broker
 ```
