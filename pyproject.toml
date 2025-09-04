@@ -29,13 +29,6 @@ dependencies = [
     "ulid-rs-py>=0.3.1",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pytest",
-    "pytest-cov",
-    "black",
-    "ruff",
-]
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -50,3 +43,12 @@ line-length = 88
 
 [tool.black]
 line-length = 88
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "ipython>=8.37.0",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "ruff>=0.12.0",
+]

@@ -12,10 +12,13 @@ install: ## 安裝依賴
 	uv sync
 
 install-dev:  ## 安裝開發依賴
-	uv sync --extra dev
+	uv sync --dev
 
 dev: ## 啟動開發服務器
 	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+dev-ipython:  ## 啟動 ipython shell
+	uv run ipython
 
 ##@ 測試
 test: ## 運行測試
