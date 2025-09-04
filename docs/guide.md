@@ -77,15 +77,15 @@ API_KEY=your-api-key  # 管理端點認證
 curl -X POST \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
-  -d '{"name": "github", "secret": "your-github-secret"}' \
-  http://localhost:8000/api/v1/sources/
+  -d '{"name": "github", "secret": "your-github-secret", "auth_type": "signature", "auth_config": {"format_type": "github"}}' \
+  http://localhost:8000/api/v1/manage/sources/
 
-# 創建主題
+# 創建主題（使用 ULID 的 source_id）
 curl -X POST \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
-  -d '{"name": "github.push", "source_id": 1}' \
-  http://localhost:8000/api/v1/topics/
+  -d '{"name": "github.push", "source_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV"}' \
+  http://localhost:8000/api/v1/manage/topics/
 ```
 
 ### 4. 管理訂閱
@@ -108,7 +108,7 @@ curl -X POST \
 
 ### 端點格式
 ```
-POST /api/v1/ingest/{source_name}/{topic_name}
+POST /api/v1/ingest/{topic_id}
 ```
 
 ### 支援的簽名驗證
@@ -131,12 +131,12 @@ X-Webhook-Signature: <hmac_signature>
 ### 範例請求
 
 ```bash
-# GitHub webhook
+# GitHub webhook（以 topic_id 為基準）
 curl -X POST \
   -H "Content-Type: application/json" \
   -H "X-Hub-Signature-256: sha256=..." \
   -d '{"action": "push", "repository": {...}}' \
-  http://localhost:8000/api/v1/ingest/github/push
+  http://localhost:8000/api/v1/ingest/01ARZ3NDEKTSV4RRFFQ69G5FAV
 ```
 
 ## 🔧 開發指南
@@ -156,10 +156,11 @@ make test
 
 ### 添加新的來源類型
 
-1. 在 `app/core/security.py` 添加簽名驗證邏輯
-2. 在資料庫中創建來源記錄
-3. 配置相應的主題
-4. 更新測試
+1. 在 `app/core/authentication/strategies/` 新增策略
+2. 由 `app/core/authentication/validator.py` 自動載入（或手動註冊）
+3. 在資料庫中創建來源記錄（設定 `auth_type` 與 `auth_config.format_type`）
+4. 配置相應的主題
+5. 更新測試
 
 ### 模組職責
 
@@ -184,7 +185,7 @@ curl -H "Authorization: Bearer your-api-key" \
 ### 查看支援的簽名驗證器
 ```bash
 curl -H "Authorization: Bearer your-api-key" \
-  http://localhost:8000/api/v1/manage/signature-validators/
+  http://localhost:8000/api/v1/manage/auth-validators/
 ```
 
 ### 查看日誌

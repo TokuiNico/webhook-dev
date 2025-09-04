@@ -27,13 +27,12 @@ Authorization: Bearer $API_KEY
 
 ## 📨 **Webhook 接收**
 
-### POST `/api/v1/ingest/{source_name}/{topic_name}`
+### POST `/api/v1/ingest/{topic_id}`
 
-接收並處理 webhook 事件。
+接收並處理 webhook 事件（以 `topic_id` 為基準）。
 
 **參數：**
-- `source_name` - 來源名稱 (如: github, stripe)
-- `topic_name` - 主題名稱 (如: push, payment_succeeded)
+- `topic_id` - 主題 ID (ULID)
 
 **標頭：**
 - `Content-Type` - 支援 JSON, XML, form-data
@@ -43,7 +42,7 @@ Authorization: Bearer $API_KEY
 **回應：**
 - `202 Accepted` - 成功接收並排隊處理
 - `400/403` - 無效請求或簽名驗證失敗
-- `404 Not Found` - 來源或主題不存在
+- `404 Not Found` - 主題不存在
 
 **範例：**
 ```bash
@@ -51,7 +50,7 @@ curl -X POST \
   -H "Content-Type: application/json" \
   -H "X-Webhook-Signature: sha256=abc123..." \
   -d '{"action": "push", "repository": {...}}' \
-  http://127.0.0.1:8000/api/v1/ingest/github/push
+  http://127.0.0.1:8000/api/v1/ingest/01ARZ3NDEKTSV4RRFFQ69G5FAV
 ```
 
 ---
@@ -74,7 +73,7 @@ curl -X POST \
   "items": [
     {
       "id": 1,
-      "topic_id": 1,
+      "topic_id": "01ARZ3NDEKTSV4RRFFQ69G5FAQ",
       "subscriber_name": "Test Service",
       "target_url": "https://example.com/webhook",
       "is_active": true,
@@ -95,7 +94,7 @@ curl -X POST \
 **請求體：**
 ```json
 {
-  "topic_id": 1,
+  "topic_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
   "subscriber_name": "My Service",
   "target_url": "https://myservice.com/webhook",
   "is_active": true
@@ -122,7 +121,7 @@ curl -X POST \
 
 ## 🔧 **系統資訊**
 
-### GET `/api/v1/manage/signature-validators/`
+### GET `/api/v1/manage/auth-validators/`
 
 獲取系統支援的簽名驗證器資訊。
 
@@ -134,29 +133,23 @@ curl -X POST \
 **回應：**
 ```json
 {
-  "supported_sources": ["github", "stripe", "generic"],
-  "total_validators": 3,
+  "supported_types": ["signature", "none"],
+  "total_validators": 2,
   "validators": [
     {
-      "validator_type": "github",
-      "description": "GitHub webhook 簽名驗證",
-      "signature_header": "X-Hub-Signature-256",
-      "format": "sha256=<hmac_signature>",
-      "algorithm": "HMAC-SHA256"
+      "auth_type": "signature",
+      "description": "HMAC 簽名驗證",
+      "required_headers": ["signature_header"],
+      "required_config": ["secret"],
+      "security_level": "high",
+      "supported_formats": ["github", "stripe", "generic"]
     },
     {
-      "validator_type": "stripe",
-      "description": "Stripe webhook 簽名驗證",
-      "signature_header": "Stripe-Signature",
-      "format": "t=<timestamp>,v1=<signature>",
-      "algorithm": "HMAC-SHA256 with timestamp"
-    },
-    {
-      "validator_type": "generic",
-      "description": "通用 HMAC-SHA256 簽名驗證",
-      "signature_header": "X-Webhook-Signature",
-      "format": "<hmac_signature>",
-      "algorithm": "HMAC-SHA256"
+      "auth_type": "none",
+      "description": "無驗證 (開發測試用)",
+      "required_headers": [],
+      "required_config": [],
+      "security_level": "none"
     }
   ]
 }
@@ -165,7 +158,7 @@ curl -X POST \
 **使用範例：**
 ```bash
 curl -H "Authorization: Bearer your-api-key" \
-  http://localhost:8000/api/v1/manage/signature-validators/
+  http://localhost:8000/api/v1/manage/auth-validators/
 ```
 
 ---
@@ -206,10 +199,6 @@ curl -H "Authorization: Bearer your-api-key" \
 ```
 
 **名稱格式要求：**
-- 只能包含小寫英文字母 (a-z)
-- 數字 (0-9)
-- 連字號 (-)
-- 底線 (_)
 - 長度：1-255 字符
 
 **簽名驗證器類型：**
@@ -233,7 +222,7 @@ curl -H "Authorization: Bearer your-api-key" \
 ```json
 {
   "name": "push",
-  "source_id": 1,
+  "source_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
   "description": "Git push events"
 }
 ```
@@ -289,7 +278,7 @@ curl -X POST \
 curl -X POST \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
-  -d '{"name": "push", "source_id": 1, "description": "Git push events"}' \
+  -d '{"name": "push", "source_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV", "description": "Git push events"}' \
   http://127.0.0.1:8000/api/v1/manage/topics/
 ```
 
@@ -300,7 +289,7 @@ curl -X POST \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
-    "topic_id": 1,
+    "topic_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
     "subscriber_name": "My App",
     "target_url": "https://myapp.com/webhooks/github",
     "is_active": true
@@ -315,7 +304,7 @@ curl -X POST \
   -H "Content-Type: application/json" \
   -H "X-Hub-Signature-256: sha256=calculated_signature" \
   -d '{"action": "push", "repository": {"name": "test-repo"}}' \
-  http://127.0.0.1:8000/api/v1/ingest/github/push
+  http://127.0.0.1:8000/api/v1/ingest/01ARZ3NDEKTSV4RRFFQ69G5FAV
 ```
 
 ### 4. 查看統計

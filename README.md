@@ -82,7 +82,7 @@ curl -X POST \
   -H "Content-Type: application/json" \
   -H "X-Hub-Signature-256: sha256=..." \
   -d '{"action": "push", "repository": {...}}' \
-  http://localhost:8000/api/v1/ingest/github/push
+  http://localhost:8000/api/v1/ingest/01ARZ3NDEKTSV4RRFFQ69G5FAV
 ```
 
 ### 訂閱管理
@@ -93,7 +93,7 @@ curl -X POST \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
-    "topic_id": 1,
+    "topic_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
     "subscriber_name": "My Service",
     "target_url": "https://myservice.com/webhook",
     "is_active": true
