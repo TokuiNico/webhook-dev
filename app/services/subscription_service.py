@@ -13,23 +13,24 @@ from app.schemas.subscription import (
     SubscriptionCreate,
     SubscriptionUpdate,
     SubscriptionResponse,
-    SubscriptionList
+    SubscriptionList,
 )
+
 
 class SubscriptionService:
     """訂閱管理服務類"""
 
     async def create_subscription(
         self,
+        db: AsyncSession,
         subscription_data: SubscriptionCreate,
-        db: AsyncSession
     ) -> SubscriptionResponse:
         """
         創建新的訂閱
 
         Args:
-            subscription_data: 訂閱創建數據
             db: 數據庫會話
+            subscription_data: 訂閱創建數據
 
         Returns:
             SubscriptionResponse: 創建的訂閱信息
@@ -45,7 +46,7 @@ class SubscriptionService:
             topic_id=subscription_data.topic_id,
             subscriber_name=subscription_data.subscriber_name,
             target_url=str(subscription_data.target_url),
-            is_active=subscription_data.is_active
+            is_active=subscription_data.is_active,
         )
 
         db.add(db_subscription)
@@ -60,7 +61,7 @@ class SubscriptionService:
         topic_id: Optional[int] = None,
         is_active: Optional[bool] = None,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
     ) -> SubscriptionList:
         """
         獲取訂閱列表
@@ -102,13 +103,11 @@ class SubscriptionService:
             items=[SubscriptionResponse.model_validate(sub) for sub in subscriptions],
             total=total,
             skip=skip,
-            limit=limit
+            limit=limit,
         )
 
     async def get_subscription_by_id(
-        self,
-        subscription_id: int,
-        db: AsyncSession
+        self, db: AsyncSession, subscription_id: int
     ) -> SubscriptionResponse:
         """
         根據 ID 獲取訂閱
@@ -128,9 +127,9 @@ class SubscriptionService:
 
     async def update_subscription(
         self,
+        db: AsyncSession,
         subscription_id: int,
         subscription_data: SubscriptionUpdate,
-        db: AsyncSession
     ) -> SubscriptionResponse:
         """
         更新訂閱
@@ -151,7 +150,7 @@ class SubscriptionService:
         # 更新字段
         update_data = subscription_data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
-            if field == "target_url" and hasattr(value, '__str__'):
+            if field == "target_url" and hasattr(value, "__str__"):
                 value = str(value)
             setattr(db_subscription, field, value)
 
@@ -161,9 +160,7 @@ class SubscriptionService:
         return SubscriptionResponse.model_validate(db_subscription)
 
     async def deactivate_subscription(
-        self,
-        subscription_id: int,
-        db: AsyncSession
+        self, db: AsyncSession, subscription_id: int
     ) -> dict:
         """
         停用訂閱（軟刪除）
@@ -180,18 +177,14 @@ class SubscriptionService:
         """
         subscription = await self._get_subscription_or_404(subscription_id, db)
         # 直接操作數據庫記錄而非 SQLAlchemy 對象屬性
-        await db.execute(
-            select(Subscription).where(Subscription.id == subscription_id)
-        )
+        await db.execute(select(Subscription).where(Subscription.id == subscription_id))
         subscription.is_active = False  # type: ignore
         await db.commit()
 
         return {"message": f"訂閱 {subscription_id} 已成功停用"}
 
     async def activate_subscription(
-        self,
-        subscription_id: int,
-        db: AsyncSession
+        self, db: AsyncSession, subscription_id: int
     ) -> dict:
         """
         啟用訂閱
@@ -219,13 +212,11 @@ class SubscriptionService:
         if not topic_result.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"主題 ID {topic_id} 不存在"
+                detail=f"主題 ID {topic_id} 不存在",
             )
 
     async def _get_subscription_or_404(
-        self,
-        subscription_id: int,
-        db: AsyncSession
+        self, subscription_id: int, db: AsyncSession
     ) -> Subscription:
         """獲取訂閱或拋出 404 錯誤"""
         result = await db.execute(
@@ -236,10 +227,11 @@ class SubscriptionService:
         if not subscription:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"訂閱 ID {subscription_id} 不存在"
+                detail=f"訂閱 ID {subscription_id} 不存在",
             )
 
         return subscription
+
 
 # 全局服務實例
 subscription_service = SubscriptionService()

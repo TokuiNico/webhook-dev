@@ -10,14 +10,15 @@ from fastapi import HTTPException, status
 
 from app.db.models import Topic, Source
 
+
 class SourceService:
     """來源管理服務類"""
 
     async def create_source(
         self,
+        db: AsyncSession,
         name: str,
         secret: str,
-        db: AsyncSession
     ) -> dict:
         """
         創建新的 Webhook 來源
@@ -34,13 +35,11 @@ class SourceService:
             HTTPException: 當來源名稱已存在時
         """
         # 檢查來源是否已存在
-        existing_result = await db.execute(
-            select(Source).where(Source.name == name)
-        )
+        existing_result = await db.execute(select(Source).where(Source.name == name))
         if existing_result.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"來源名稱 '{name}' 已存在"
+                detail=f"來源名稱 '{name}' 已存在",
             )
 
         # 創建新來源
@@ -52,7 +51,7 @@ class SourceService:
         return {
             "id": db_source.id,
             "name": db_source.name,
-            "created_at": db_source.created_at.isoformat()
+            "created_at": db_source.created_at.isoformat(),
         }
 
     async def get_sources(self, db: AsyncSession) -> List[dict]:
@@ -72,20 +71,17 @@ class SourceService:
             {
                 "id": source.id,
                 "name": source.name,
-                "created_at": source.created_at.isoformat()
+                "created_at": source.created_at.isoformat(),
             }
             for source in sources
         ]
+
 
 class TopicService:
     """主題管理服務類"""
 
     async def create_topic(
-        self,
-        name: str,
-        source_id: int,
-        db: AsyncSession,
-        description: str = ""
+        self, db: AsyncSession, name: str, source_id: int, description: str = ""
     ) -> dict:
         """
         創建新的主題
@@ -103,31 +99,30 @@ class TopicService:
             HTTPException: 當來源不存在或主題名稱已存在時
         """
         # 驗證來源是否存在
-        source_result = await db.execute(
-            select(Source).where(Source.id == source_id)
-        )
-        if not source_result.scalar_one_or_none():
+        source_result = await db.execute(select(Source).where(Source.id == source_id))
+        if not (source := source_result.scalar_one_or_none()):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"來源 ID {source_id} 不存在"
+                detail=f"來源 ID {source_id} 不存在",
             )
 
         # 檢查主題名稱是否已存在
-        existing_result = await db.execute(
-            select(Topic).where(Topic.name == name)
-        )
+        existing_result = await db.execute(select(Topic).where(Topic.name == name))
         if existing_result.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"主題名稱 '{name}' 已存在"
+                detail=f"主題名稱 '{name}' 已存在",
+            )
+
+        # topic name 應該要符合 source name 格式
+        if not name.startswith(f"{str(source.name)}."):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"主題名稱 '{name}' 不符合來源名稱 '{source.name}' 格式",
             )
 
         # 創建新主題
-        db_topic = Topic(
-            name=name,
-            source_id=source_id,
-            description=description
-        )
+        db_topic = Topic(name=name, source_id=source_id, description=description)
 
         db.add(db_topic)
         await db.commit()
@@ -138,13 +133,12 @@ class TopicService:
             "name": db_topic.name,
             "source_id": db_topic.source_id,
             "description": db_topic.description or "",
-            "created_at": db_topic.created_at.isoformat()
+            "created_at": db_topic.created_at.isoformat(),
+            "updated_at": db_topic.updated_at.isoformat(),
         }
 
     async def get_topics(
-        self,
-        db: AsyncSession,
-        source_id: Optional[int] = None
+        self, db: AsyncSession, source_id: Optional[int] = None
     ) -> List[dict]:
         """
         獲取主題列表
@@ -171,15 +165,16 @@ class TopicService:
                 "name": topic.name,
                 "source_id": topic.source_id,
                 "description": topic.description or "",
-                "created_at": topic.created_at.isoformat()
+                "updated_at": topic.updated_at.isoformat(),
+                "created_at": topic.created_at.isoformat(),
             }
             for topic in topics
         ]
 
     async def get_topic_by_id(
         self,
+        db: AsyncSession,
         topic_id: int,
-        db: AsyncSession
     ) -> dict:
         """
         根據 ID 獲取主題
@@ -200,7 +195,7 @@ class TopicService:
         if not topic:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"主題 ID {topic_id} 不存在"
+                detail=f"主題 ID {topic_id} 不存在",
             )
 
         return {
@@ -208,8 +203,10 @@ class TopicService:
             "name": topic.name,
             "source_id": topic.source_id,
             "description": topic.description or "",
-            "created_at": topic.created_at.isoformat()
+            "updated_at": topic.updated_at.isoformat(),
+            "created_at": topic.created_at.isoformat(),
         }
+
 
 # 全局服務實例
 source_service = SourceService()

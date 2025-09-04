@@ -53,7 +53,7 @@ async def create_source(
 
     **注意：** 密鑰用於驗證 webhook 的 HMAC 簽名，確保請求來自可信的來源。
     """
-    return await source_service.create_source(source.name, source.secret, db)
+    return await source_service.create_source(db, source.name, source.secret)
 
 
 # Topic endpoints
@@ -109,7 +109,7 @@ async def create_topic(
     - 保持一致性和可讀性
     """
     return await topic_service.create_topic(
-        topic.name, topic.source_id, db, topic.description or ""
+        db, topic.name, topic.source_id, topic.description or ""
     )
 
 
@@ -118,7 +118,7 @@ async def get_topic(
     topic_id: int, db: AsyncSession = Depends(get_authenticated_db)
 ) -> dict:
     """獲取特定主題的詳細信息"""
-    return await topic_service.get_topic_by_id(topic_id, db)
+    return await topic_service.get_topic_by_id(db, topic_id)
 
 
 # Signature validators info endpoint

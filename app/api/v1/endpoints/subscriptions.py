@@ -44,7 +44,7 @@ async def create_subscription(
     - `target_url`: 接收 webhook 的目標 URL
     - `is_active`: 是否啟用此訂閱
     """
-    return await subscription_service.create_subscription(subscription, db)
+    return await subscription_service.create_subscription(db, subscription)
 
 
 @router.get("/", response_model=SubscriptionList)
@@ -73,7 +73,7 @@ async def get_subscription(
     subscription_id: int, db: AsyncSession = Depends(get_authenticated_db)
 ) -> SubscriptionResponse:
     """獲取特定訂閱的詳細信息"""
-    return await subscription_service.get_subscription_by_id(subscription_id, db)
+    return await subscription_service.get_subscription_by_id(db, subscription_id)
 
 
 @router.put("/{subscription_id}", response_model=SubscriptionResponse)
@@ -88,7 +88,7 @@ async def update_subscription(
     可以更新目標 URL、啟用狀態等配置
     """
     return await subscription_service.update_subscription(
-        subscription_id, subscription_update, db
+        db, subscription_id, subscription_update
     )
 
 
@@ -102,7 +102,7 @@ async def deactivate_subscription(
     注意：這不會實際刪除記錄，只是將其標記為非活躍狀態。
     停用的訂閱不會再接收 webhook 事件。
     """
-    return await subscription_service.deactivate_subscription(subscription_id, db)
+    return await subscription_service.deactivate_subscription(db, subscription_id)
 
 
 @router.post("/{subscription_id}/activate")
@@ -110,4 +110,4 @@ async def activate_subscription(
     subscription_id: int, db: AsyncSession = Depends(get_authenticated_db)
 ) -> dict:
     """重新啟用已停用的訂閱"""
-    return await subscription_service.activate_subscription(subscription_id, db)
+    return await subscription_service.activate_subscription(db, subscription_id)
