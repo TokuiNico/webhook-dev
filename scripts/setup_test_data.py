@@ -3,11 +3,6 @@
 測試設置腳本 - 初始化 SQLite 資料庫並插入測試資料
 """
 import asyncio
-import sys
-import os
-
-# 添加應用路徑
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'app'))
 
 from app.db.session import engine, AsyncSessionLocal
 from app.db.base import Base

@@ -4,11 +4,11 @@
 """
 
 import requests
-import json
+from app.core.config import settings
 
 # 配置
 BASE_URL = "http://127.0.0.1:8000"
-API_KEY = "webhook-admin-key-123"  # 與 .env 中的 API_KEY 相同
+API_KEY = settings.API_KEY  # 從配置中讀取
 
 headers = {
     "Authorization": f"Bearer {API_KEY}",
