@@ -14,13 +14,11 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./config/mysql:/etc/mysql/conf.d
-    command: --default-authentication-plugin=mysql_native_password
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 20s
-      retries: 10
+      retries: 5
       interval: 30s
-      start_period: 30s
     networks:
       - webhook-network
 
@@ -31,31 +29,25 @@ services:
     restart: unless-stopped
     ports:
       - "5672:5672"   # AMQP port
-      - "15672:15672" # Management UI port
+      - "15672:15672" # Management UI
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin}
-      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-webhook_secret_cookie}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-      - ./config/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 30s
+      retries: 3
     networks:
       - webhook-network
 
   # API Server
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     container_name: webhook_api
     restart: unless-stopped
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
     ports:
       - "8000:8000"
     depends_on:
@@ -66,12 +58,9 @@ services:
     environment:
       - DATABASE_URL=mysql+aiomysql://${MYSQL_USER:-webhook_user}:${MYSQL_PASSWORD:-webhook_password}@db:3306/${MYSQL_DATABASE:-webhook_db}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin}@rabbitmq:5672/
-      - DEVELOPMENT=false
       - USE_SQLITE=false
-      - DISABLE_BROKER=false
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
-      - API_KEY=${API_KEY:-your-api-key-for-management-endpoints}
-      - MANAGEMENT_API_KEY=${MANAGEMENT_API_KEY:-your-management-api-key}
+      - API_KEY=${API_KEY:-your-api-key}
     env_file:
       - .env
     volumes:
@@ -81,16 +70,13 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
     networks:
       - webhook-network
 
   # FastStream Worker
-  faststream:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: webhook_faststream
+  worker:
+    build: .
+    container_name: webhook_worker
     restart: unless-stopped
     command: faststream run app.stream.app:stream_app --workers 2
     depends_on:
@@ -101,49 +87,13 @@ services:
     environment:
       - DATABASE_URL=mysql+aiomysql://${MYSQL_USER:-webhook_user}:${MYSQL_PASSWORD:-webhook_password}@db:3306/${MYSQL_DATABASE:-webhook_db}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin}@rabbitmq:5672/
-      - DEVELOPMENT=false
       - USE_SQLITE=false
-      - DISABLE_BROKER=false
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
     env_file:
       - .env
     volumes:
       - ./logs:/app/logs
-    healthcheck:
-      test: ["CMD", "ps", "aux", "|", "grep", "faststream"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
     networks:
       - webhook-network
-
-  # Development API (with reload)
-  api-dev:
-    build: .
-    container_name: webhook_api_dev
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    volumes:
-      - .:/app
-    ports:
-      - "8001:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      - DATABASE_URL=mysql+aiomysql://${MYSQL_USER:-webhook_user}:${MYSQL_PASSWORD:-webhook_password}@db:3306/${MYSQL_DATABASE:-webhook_db}
-      - RABBITMQ_URL=amqp://guest:guest@localhost:5672/
-      - DEVELOPMENT=true
-      - USE_SQLITE=false
-      - DISABLE_BROKER=true
-    env_file:
-      - .env
-    profiles:
-      - dev
-    networks:
-      - webhook-network
-
-
 
 networks:
   webhook-network:
@@ -151,6 +101,4 @@ networks:
 
 volumes:
   mysql_data:
-    driver: local
   rabbitmq_data:
-    driver: local
