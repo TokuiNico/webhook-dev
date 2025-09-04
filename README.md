@@ -9,19 +9,19 @@
 
 ## ✨ 特色功能
 
-- 🔄 **異步處理**：使用 FastStream 和 RabbitMQ 進行高效的異步事件處理
+- 🔄 **異步處理**：使用 TaskIQ 和 RabbitMQ 進行高效的異步事件處理
 - 📡 **多格式支援**：支援 JSON、XML 和 form-data 格式的 webhook
 - 🔒 **安全驗證**：內建 HMAC 簽名驗證機制
 - 📊 **即時統計**：提供詳細的統計數據和監控功能
-- 🚀 **事件流處理**：使用 FastStream 進行即時事件分發
+- 🚀 **事件流處理**：使用 TaskIQ 進行即時事件分發
 - 🐳 **容器化部署**：完整的 Docker 和 Docker Compose 支援
 
 ## 🏗️ 系統架構
 
 - **API Gateway**: FastAPI 應用程式，處理 HTTP 請求和回應
-- **事件處理器**: FastStream 應用程式，管理事件流和分發邏輯
+- **事件處理器**: TaskIQ 任務系統，管理事件流和分發邏輯
 - **數據存儲**: MySQL 數據庫，存儲訂閱和事件日誌
-- **消息佇列**: RabbitMQ，作為 FastStream 的後端
+- **消息佇列**: RabbitMQ，作為 TaskIQ 的後端
 
 ## 🚀 快速開始
 
@@ -158,7 +158,7 @@ app/
 ├── db/              # 數據庫模型和會話
 ├── schemas/         # Pydantic 模式定義
 ├── services/        # 業務邏輯服務
-└── stream/          # FastStream 應用程式和事件處理器
+└── taskiq/          # TaskIQ 任務系統和事件處理器
 ```
 
 ## 📚 文檔

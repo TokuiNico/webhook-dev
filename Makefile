@@ -10,7 +10,7 @@ help: ## 顯示可用指令
 
 ##@ 開發環境
 install: ## 安裝依賴
-	uv sync
+	uv sync  --extra dev
 
 dev: ## 啟動開發服務器
 	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -21,6 +21,10 @@ test: ## 運行測試
 
 test-webhook: ## 測試 webhook 功能
 	uv run python test_webhook.py
+
+##@ TaskIQ 任務處理
+worker: ## 啟動 TaskIQ worker
+	uv run -m taskiq worker app.taskiq.broker_manager:broker --workers 1
 
 ##@ Docker 部署
 build: ## 構建並啟動所有服務
