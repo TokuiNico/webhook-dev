@@ -1,5 +1,4 @@
 # Webhook Gateway Makefile
-# 簡化版 - 只保留核心開發指令
 
 .PHONY: help install dev test clean build start stop logs
 
@@ -10,17 +9,30 @@ help: ## 顯示可用指令
 
 ##@ 開發環境
 install: ## 安裝依賴
-	uv sync  --extra dev
+	uv sync
+
+install-dev:  ## 安裝開發依賴
+	uv sync --extra dev
 
 dev: ## 啟動開發服務器
 	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ##@ 測試
 test: ## 運行測試
-	uv run python -m pytest -v
+	uv run python -m pytest  tests/ -v
 
-test-webhook: ## 測試 webhook 功能
-	uv run python test_webhook.py
+##@ 功能演示腳本
+demo-webhook: ## 演示 webhook 功能（需要服務器運行）
+	uv run python scripts/webhook_demo.py
+
+demo-api: ## 演示訂閱管理 API（需要服務器運行）
+	uv run python scripts/subscriptions_api_demo.py
+
+setup-test-data: ## 設置測試數據
+	uv run python scripts/setup_test_data.py
+
+debug-webhook: ## Debug webhook 問題
+	uv run python scripts/webhook_debug.py
 
 ##@ TaskIQ 任務處理
 worker: ## 啟動 TaskIQ worker

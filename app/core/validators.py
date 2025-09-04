@@ -35,4 +35,10 @@ def validate_name(name: str) -> str:
     return name
 
 
-NameType = Annotated[str, Field(min_length=1, max_length=255, pattern=r"^[a-z0-9_-]+$", examples=['test-name']), AfterValidator(validate_name)]
+NameType = Annotated[
+    str,
+    Field(
+        min_length=1, max_length=255, pattern=r"^[a-z0-9_-]+$", examples=["test-name"]
+    ),
+    AfterValidator(validate_name),
+]

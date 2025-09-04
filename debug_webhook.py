@@ -1,7 +1,6 @@
 import asyncio
 import json
 import traceback
-from fastapi import Request
 from app.db.session import AsyncSessionLocal
 from app.db.models import Source, Topic, EventLog, EventLogStatus
 from app.core.security import get_webhook_body_and_signature, verify_webhook_signature
@@ -118,7 +117,7 @@ async def test_webhook_logic():
     except Exception as e:
         print(f"❌ 錯誤: {e}")
         print(f"錯誤類型: {type(e)}")
-        print(f"Traceback:")
+        print("Traceback:")
         traceback.print_exc()
 
 if __name__ == "__main__":

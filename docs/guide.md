@@ -48,7 +48,7 @@ cd webhook-dev
 make build
 
 # 或本地開發
-make install
+make install  # or make install-dev
 make dev
 ```
 

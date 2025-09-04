@@ -55,6 +55,9 @@ make build
 # 安裝依賴
 make install
 
+# or 安裝開發依賴
+make install-dev
+
 # 啟動開發服務器
 make dev
 ```
@@ -130,11 +133,20 @@ curl -H "Authorization: Bearer your-api-key" \
 ## 🧪 測試
 
 ```bash
-# 運行所有測試
+# 運行單元測試
 make test
 
-# 測試 webhook 功能
-make test-webhook
+# 設置測試資料
+make setup-test-data
+
+# 演示 webhook 功能（需服務器運行）
+make demo-webhook
+
+# 演示 API 管理功能（需服務器運行）
+make demo-api
+
+# Debug webhook 問題
+make debug-webhook
 ```
 
 ## 🛠️ 開發指南
