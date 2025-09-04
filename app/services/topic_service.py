@@ -3,13 +3,12 @@
 處理主題和來源相關的所有業務邏輯
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from fastapi import HTTPException, status
 
 from app.db.models import Topic, Source
-from app.core.signature.types import SignatureValidatorType
 from app.core.config import settings
 
 
@@ -21,7 +20,8 @@ class SourceService:
         db: AsyncSession,
         name: str,
         secret: str,
-        signature_validator: str = "none",
+        auth_type: str = "none",
+        auth_config: Optional[Dict[str, Any]] = None,
     ) -> dict:
         """
         創建新的 Webhook 來源
@@ -30,14 +30,15 @@ class SourceService:
             db: 數據庫會話
             name: 來源名稱（如 'github', 'stripe'）- 現在允許重複
             secret: 用於驗證的密鑰
-            signature_validator: 簽名驗證器類型（'github' 或 'none'）
+            auth_type: 認證類型（'signature' 或 'none'）
+            auth_config: 認證配置（JSON 格式）
 
         Returns:
             dict: 創建的來源信息
         """
         # 創建新來源 - 移除名稱唯一性檢查
         db_source = Source(
-            name=name, secret=secret, signature_validator=signature_validator
+            name=name, secret=secret, auth_type=auth_type, auth_config=auth_config
         )
         db.add(db_source)
         await db.commit()
@@ -46,7 +47,8 @@ class SourceService:
         return {
             "id": db_source.id,
             "name": db_source.name,
-            "signature_validator": db_source.signature_validator,
+            "auth_type": db_source.auth_type,
+            "auth_config": db_source.auth_config,
             "created_at": db_source.created_at.isoformat(),
         }
 
@@ -67,7 +69,8 @@ class SourceService:
             {
                 "id": source.id,
                 "name": source.name,
-                "signature_validator": source.signature_validator,
+                "auth_type": source.auth_type,
+                "auth_config": source.auth_config,
                 "created_at": source.created_at.isoformat(),
             }
             for source in sources

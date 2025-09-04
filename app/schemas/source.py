@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Literal
+from typing import Optional, Literal, Dict, Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -7,7 +7,8 @@ from pydantic import BaseModel, ConfigDict
 class SourceBase(BaseModel):
     name: str  # 移除 NameType 限制，允許任意名稱
     secret: str
-    signature_validator: Literal["github", "none"] = "none"  # 只支援 github 和 none
+    auth_type: Literal["signature", "none"] = "none"  # 認證類型
+    auth_config: Optional[Dict[str, Any]] = None  # 認證配置 (JSON)
 
 
 class SourceCreate(SourceBase):
@@ -19,6 +20,7 @@ class SourceResponse(BaseModel):
 
     id: str  # 改為 str 支援 ULID
     name: str
-    signature_validator: str
+    auth_type: str
+    auth_config: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: Optional[datetime] = None

@@ -53,7 +53,13 @@ async def create_source(
 
     **注意：** 密鑰用於驗證 webhook 的 HMAC 簽名，確保請求來自可信的來源。
     """
-    return await source_service.create_source(db, source.name, source.secret, source.signature_validator)
+    return await source_service.create_source(
+        db=db,
+        name=source.name,
+        secret=source.secret,
+        auth_type=source.auth_type,
+        auth_config=source.auth_config
+    )
 
 
 # Topic endpoints
@@ -126,9 +132,9 @@ async def get_topic(
     return await topic_service.get_topic_by_id(db, topic_id)
 
 
-# Signature validators info endpoint
-@router.get("/signature-validators/")
-async def get_signature_validators(api_key: str = Depends(get_api_key)):
+# Authentication validators info endpoint
+@router.get("/auth-validators/")
+async def get_auth_validators(api_key: str = Depends(get_api_key)):
     """
     獲取系統支援的簽名驗證器資訊
 
@@ -161,18 +167,18 @@ async def get_signature_validators(api_key: str = Depends(get_api_key)):
     }
     ```
     """
-    # 從實際的簽名驗證器動態獲取資訊
-    supported_sources = webhook_service.signature_validator.get_supported_sources()
-    validator_info = webhook_service.signature_validator.get_validator_info()
+    # 從實際的認證驗證器動態獲取資訊
+    supported_types = webhook_service.auth_validator.get_supported_types()
+    validator_info = webhook_service.auth_validator.get_validator_info()
 
     # 將驗證器資訊轉換為列表格式
     validators = []
-    for source in supported_sources:
-        if source in validator_info:
-            validators.append(validator_info[source])
+    for auth_type in supported_types:
+        if auth_type in validator_info:
+            validators.append(validator_info[auth_type])
 
     return {
-        "supported_sources": supported_sources,
+        "supported_types": supported_types,
         "total_validators": len(validators),
         "validators": validators,
     }

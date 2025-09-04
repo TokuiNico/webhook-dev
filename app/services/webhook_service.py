@@ -4,14 +4,13 @@ Webhook 接收和處理服務
 """
 
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 
 from fastapi import HTTPException
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.signature import SignatureValidator
-from app.core.signature.types import SignatureValidatorType
+from app.core.authentication import AuthenticationValidator
 from app.db.models import EventLog, EventLogStatus, Source, Subscription, Topic
 from app.taskiq.tasks import send_webhook_to_subscription
 
@@ -22,7 +21,7 @@ class WebhookService:
     """Webhook 處理服務"""
 
     def __init__(self):
-        self.signature_validator = SignatureValidator()
+        self.auth_validator = AuthenticationValidator()
 
     async def validate_source_and_topic(
         self, source_name: str, topic_name: str, db: AsyncSession
@@ -246,23 +245,25 @@ class WebhookService:
             db=db,
         )
 
-        # 3. 驗證簽名
-        signature_valid = self.signature_validator.validate_signature(
-            validator_type=SignatureValidatorType(source.signature_validator),
+        # 3. 執行認證驗證
+        auth_config = self._build_auth_config(source)
+        auth_result = self.auth_validator.validate(
+            auth_type=source.auth_type,
             body=body,
             headers=headers,
-            secret=str(source.secret),
+            source_ip=source_ip,
+            config=auth_config,
         )
 
-        if not signature_valid:
-            logger.warning(f"❌ 簽名驗證失敗: {source_name}")
+        if not auth_result.success:
+            logger.warning(f"❌ 認證驗證失敗: {source_name} - {auth_result.message}")
             await self.update_event_status(
                 event_log, EventLogStatus.FAILED_VALIDATION, db
             )
-            raise HTTPException(status_code=403, detail="Webhook 簽名驗證失敗")
+            raise HTTPException(status_code=403, detail=f"Webhook 認證失敗: {auth_result.message}")
 
-        # 4. 簽名驗證成功，更新狀態
-        logger.info(f"✅ 簽名驗證成功: {source_name}/{topic_name}")
+        # 4. 認證驗證成功，更新狀態
+        logger.info(f"✅ 認證驗證成功: {source_name}/{topic_name} - {auth_result.message}")
         await self.update_event_status(event_log, EventLogStatus.QUEUED, db)
 
         # 5. 獲取訂閱並發布事件
@@ -280,6 +281,37 @@ class WebhookService:
         )
 
         return {"message": "Webhook received and queued for processing"}
+
+    def _build_auth_config(self, source: Source) -> Dict[str, Any]:
+        """
+        根據來源配置構建認證配置
+
+        Args:
+            source: 來源對象
+
+        Returns:
+            Dict[str, Any]: 認證配置字典
+        """
+        config = {}
+
+        # 如果有儲存的配置，使用儲存的配置
+        if source.auth_config:
+            config.update(source.auth_config)
+
+        # 對於簽名驗證，確保有 secret
+        if source.auth_type == "signature":
+            config["secret"] = str(source.secret)
+
+            # 如果沒有指定格式，根據來源名稱推測
+            if "format_type" not in config:
+                if source.name == "github":
+                    config["format_type"] = "github"
+                elif source.name == "stripe":
+                    config["format_type"] = "stripe"
+                else:
+                    config["format_type"] = "generic"
+
+        return config
 
     async def get_topic_by_id(self, topic_id: str, db: AsyncSession) -> Tuple[Source, Topic]:
         """
@@ -360,23 +392,25 @@ class WebhookService:
             db=db,
         )
 
-        # 3. 驗證簽名
-        signature_valid = self.signature_validator.validate_signature(
-            validator_type=source.signature_validator,
+        # 3. 執行認證驗證
+        auth_config = self._build_auth_config(source)
+        auth_result = self.auth_validator.validate(
+            auth_type=source.auth_type,
             body=body,
             headers=headers,
-            secret=str(source.secret),
+            source_ip=source_ip,
+            config=auth_config,
         )
 
-        if not signature_valid:
-            logger.warning(f"❌ 簽名驗證失敗: topic_id={topic_id}")
+        if not auth_result.success:
+            logger.warning(f"❌ 認證驗證失敗: topic_id={topic_id} - {auth_result.message}")
             await self.update_event_status(
                 event_log, EventLogStatus.FAILED_VALIDATION, db
             )
-            raise HTTPException(status_code=403, detail="Webhook 簽名驗證失敗")
+            raise HTTPException(status_code=403, detail=f"Webhook 認證失敗: {auth_result.message}")
 
-        # 4. 簽名驗證成功，更新狀態
-        logger.info(f"✅ 簽名驗證成功: topic_id={topic_id}")
+        # 4. 認證驗證成功，更新狀態
+        logger.info(f"✅ 認證驗證成功: topic_id={topic_id} - {auth_result.message}")
         await self.update_event_status(event_log, EventLogStatus.QUEUED, db)
 
         # 5. 獲取訂閱並發布事件

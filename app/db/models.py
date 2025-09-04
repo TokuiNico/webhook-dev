@@ -27,9 +27,12 @@ class Source(Base):
     secret = Column(
         String(255), nullable=False
     )  # Secret key for HMAC signature validation
-    signature_validator = Column(
+    auth_type = Column(
         String(50), nullable=False, default="none"
-    )  # Signature validator strategy - 預設為 none
+    )  # Authentication type - 預設為 none
+    auth_config = Column(
+        JSON, nullable=True, default=None
+    )  # Authentication configuration (JSON format)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(
         DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
