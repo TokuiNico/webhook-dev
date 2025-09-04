@@ -7,10 +7,7 @@ from .validator import SignatureValidator, SignatureStrategy
 from .strategies import (
     GitHubSignatureStrategy,
     StripeSignatureStrategy,
-    GenericSignatureStrategy,
-    SlackSignatureStrategy,
-    DiscordSignatureStrategy,
-    CustomWebhookStrategy
+    GenericSignatureStrategy
 )
 
 __all__ = [
@@ -18,8 +15,5 @@ __all__ = [
     "SignatureStrategy",
     "GitHubSignatureStrategy",
     "StripeSignatureStrategy",
-    "GenericSignatureStrategy",
-    "SlackSignatureStrategy",
-    "DiscordSignatureStrategy",
-    "CustomWebhookStrategy"
+    "GenericSignatureStrategy"
 ]
