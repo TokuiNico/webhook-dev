@@ -4,8 +4,7 @@ Webhook 接收和處理服務
 """
 
 import logging
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 from fastapi import HTTPException
 from sqlalchemy import select, update
@@ -14,8 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.signature import SignatureValidator
 from app.core.signature.types import SignatureValidatorType
 from app.db.models import EventLog, EventLogStatus, Source, Subscription, Topic
-from app.stream.broker_manager import broker_manager
-from app.stream.models import SubscriptionInfo, WebhookEvent
+from app.taskiq.tasks import send_webhook_to_subscription
 
 logger = logging.getLogger(__name__)
 
@@ -141,48 +139,45 @@ class WebhookService:
         subscriptions: List[Subscription],
     ) -> None:
         """
-        發布 webhook 事件到消息隊列
+        直接發送 webhook 事件給多個訂閱者
 
-        根據 IMPLEMENTATION_PLAN.md 的架構，將事件發布到 FastStream 的 "webhook.received" 隊列
-        由 FastStream handlers 處理事件分發給所有訂閱者
+        使用 TaskIQ 為每個訂閱者創建獨立的任務，
+        取代原本 FastStream 的兩層架構（webhook.received -> webhook.dispatch）
         """
-        logger.info(f"🚀 準備發布事件到消息隊列: {event_log.id}")
-
-        # 將 SQLAlchemy 訂閱對象轉換為 Pydantic 模型
-        subscription_infos = [
-            SubscriptionInfo(
-                id=sub.id,  # type: ignore
-                subscriber_name=sub.subscriber_name,  # type: ignore
-                target_url=sub.target_url,  # type: ignore
-                is_active=sub.is_active,  # type: ignore
-            )
-            for sub in subscriptions
-        ]
+        logger.info(f"🚀 準備發送事件給 {len(subscriptions)} 個訂閱者: {event_log.id}")
 
         # 標準化 headers：小寫鍵，字串值
         normalized_headers = {str(k).lower(): str(v) for k, v in headers.items()}
 
-        # 創建 WebhookEvent 對象
-        webhook_event = WebhookEvent(
-            event_log_id=event_log.id,  # type: ignore
-            topic_id=topic.id,  # type: ignore
-            topic_name=topic.name,  # type: ignore
-            source_name=source.name,  # type: ignore
-            payload=payload,
-            content_type=content_type,
-            headers=normalized_headers,
-            source_ip=source_ip,
-            subscriptions=subscription_infos,
-            received_at=datetime.utcnow(),
-        )
+        # 直接為每個活躍訂閱者創建 TaskIQ 任務
+        task_count = 0
+        for subscription in subscriptions:
+            # 檢查訂閱是否活躍（使用 bool() 轉換避免 SQLAlchemy Column 比較問題）
+            if bool(subscription.is_active):
+                # 使用 TaskIQ 發送任務到隊列
+                await send_webhook_to_subscription.kiq(
+                    event_log_id=event_log.id,  # type: ignore
+                    subscription_id=subscription.id,  # type: ignore
+                    subscriber_name=subscription.subscriber_name,  # type: ignore
+                    target_url=subscription.target_url,  # type: ignore
+                    topic_name=topic.name,  # type: ignore
+                    source_name=source.name,  # type: ignore
+                    payload=payload,
+                    content_type=content_type,
+                    headers=normalized_headers,
+                    source_ip=source_ip,
+                    attempt=1,
+                )
+                task_count += 1
 
-        # 發布事件到 FastStream 的 "webhook.received" 隊列
-        # broker_manager 會自動處理開發/生產模式的差異
-        await broker_manager.publish(webhook_event, "webhook.received")
+                logger.info(
+                    f"📤 已排隊分發任務: 訂閱 {subscription.id} "
+                    f"({subscription.subscriber_name}) -> {subscription.target_url}"
+                )
 
         logger.info(
-            f"✅ 事件已發布到消息隊列: {event_log.id}, "
-            f"主題: {topic.name}, 訂閱數: {len(subscription_infos)}"
+            f"✅ 已排隊 {task_count} 個分發任務 for event {event_log.id}, "
+            f"主題: {topic.name}"
         )
 
     async def update_event_status(
@@ -207,7 +202,6 @@ class WebhookService:
         source_name: str,
         topic_name: str,
         body: bytes,
-        signature_headers: Dict[str, Optional[str]],
         content_type: str,
         headers: Dict[str, str],
         source_ip: str,
@@ -220,7 +214,6 @@ class WebhookService:
             source_name: 來源名稱
             topic_name: 主題名稱
             body: 請求體
-            signature_headers: 簽名頭
             content_type: 內容類型
             headers: 請求頭
             source_ip: 來源IP
@@ -257,7 +250,7 @@ class WebhookService:
         signature_valid = self.signature_validator.validate_signature(
             validator_type=SignatureValidatorType(source.signature_validator),
             body=body,
-            signature_headers=signature_headers,
+            headers=headers,
             secret=str(source.secret),
         )
 

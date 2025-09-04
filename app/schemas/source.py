@@ -1,13 +1,14 @@
-from pydantic import BaseModel, ConfigDict, AfterValidator
 from datetime import datetime
 from typing import Optional
-from typing_extensions import Annotated
-from app.core.validators import validate_source_name
+
+from pydantic import BaseModel, ConfigDict
+
 from app.core.signature.types import SignatureValidatorType
+from app.core.validators import NameType
 
 
 class SourceBase(BaseModel):
-    name: Annotated[str, AfterValidator(validate_source_name)]
+    name: NameType
     secret: str
     signature_validator: SignatureValidatorType = SignatureValidatorType.GENERIC
 

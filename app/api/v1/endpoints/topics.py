@@ -139,7 +139,7 @@ async def get_signature_validators(api_key: str = Depends(get_api_key)):
         "total_validators": 3,
         "validators": [
             {
-                "source_type": "github",
+                "validator_type": "github",
                 "description": "GitHub webhook 簽名驗證",
                 "signature_header": "X-Hub-Signature-256",
                 "format": "sha256=<hmac_signature>",

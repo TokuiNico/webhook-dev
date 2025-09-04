@@ -47,9 +47,11 @@ class Subscription(Base):
     dispatch_logs = relationship("DispatchLog", back_populates="subscription")
 
 class EventLogStatus(enum.Enum):
-    RECEIVED = "received"
-    QUEUED = "queued"
-    FAILED_VALIDATION = "failed_validation"
+    RECEIVED = enum.auto()
+    QUEUED = enum.auto()
+    FAILED_VALIDATION = enum.auto()
+    # TODO: 加上 完成 or 失敗的狀態
+
 
 class EventLog(Base):
     __tablename__ = "event_logs"

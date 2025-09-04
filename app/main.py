@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from app.db.base import Base
 from app.db.session import engine
 from app.api.v1 import api_router
-from app.stream.broker_manager import broker_manager
+from app.taskiq.broker_manager import taskiq_broker_manager
 import logging
 
 # 新增：安全中介與指標
@@ -20,13 +20,13 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
 
 
-    # 啟動 broker（自動處理開發/生產模式）
-    await broker_manager.start()
+    # 啟動 TaskIQ broker（自動處理開發/生產模式）
+    await taskiq_broker_manager.startup()
 
     yield
 
-    # 關閉 broker
-    await broker_manager.close()
+    # 關閉 TaskIQ broker
+    await taskiq_broker_manager.shutdown()
 
 app = FastAPI(
     title="Webhook Gateway",
@@ -42,8 +42,8 @@ app.add_middleware(WebhookSecurityMiddleware)
 # Include API routers
 app.include_router(api_router, prefix="/api/v1")
 
-# 導入處理器以確保註冊到 FastStream
-from app.stream import handlers as handlers  # noqa: E402  # isort:skip
+# 導入 TaskIQ 任務以確保註冊
+from app.taskiq import tasks as taskiq_tasks  # noqa: E402  # isort:skip
 
 @app.get("/")
 def read_root():
@@ -51,7 +51,7 @@ def read_root():
     return {
         "status": "ok",
         "service": "webhook-gateway",
-        "mode": broker_manager.mode_description
+        "mode": taskiq_broker_manager.mode_description
     }
 
 @app.get("/health")

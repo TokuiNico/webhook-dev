@@ -20,21 +20,21 @@ class SignatureValidatorType(StrEnum):
         """獲取策略資訊"""
         info_map = {
             self.GENERIC: {
-                "source_type": self.GENERIC.value,
+                "validator_type": self.GENERIC.value,
                 "description": "通用 HMAC-SHA256 簽名驗證",
                 "signature_header": "X-Webhook-Signature",
                 "format": "<hmac_signature>",
                 "algorithm": "HMAC-SHA256",
             },
             self.GITHUB: {
-                "source_type": self.GITHUB.value,
+                "validator_type": self.GITHUB.value,
                 "description": "GitHub webhook 簽名驗證",
                 "signature_header": "X-Hub-Signature-256",
                 "format": "sha256=<hmac_signature>",
                 "algorithm": "HMAC-SHA256",
             },
             self.STRIPE: {
-                "source_type": self.STRIPE.value,
+                "validator_type": self.STRIPE.value,
                 "description": "Stripe webhook 簽名驗證",
                 "signature_header": "Stripe-Signature",
                 "format": "t=<timestamp>,v1=<signature>",

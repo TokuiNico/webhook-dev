@@ -32,7 +32,7 @@ app/
 ├── core/                   # 核心配置和安全
 ├── db/models.py           # 資料庫模型
 ├── services/              # 業務邏輯服務
-└── stream/                # FastStream 事件處理
+└── taskiq/                # TaskIQ 任務處理
 ```
 
 ## 🚀 快速開始
@@ -202,7 +202,7 @@ docker compose logs -f api
 - **db**: MySQL 8.0 (端口 3306)
 - **rabbitmq**: RabbitMQ 3 with Management (端口 5672/15672)
 - **api**: FastAPI 應用 (端口 8000)
-- **worker**: FastStream 事件處理器
+- **worker**: TaskIQ 任務處理器
 
 ### 常用指令
 ```bash

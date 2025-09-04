@@ -138,21 +138,21 @@ curl -X POST \
   "total_validators": 3,
   "validators": [
     {
-      "source_type": "github",
+      "validator_type": "github",
       "description": "GitHub webhook 簽名驗證",
       "signature_header": "X-Hub-Signature-256",
       "format": "sha256=<hmac_signature>",
       "algorithm": "HMAC-SHA256"
     },
     {
-      "source_type": "stripe",
+      "validator_type": "stripe",
       "description": "Stripe webhook 簽名驗證",
       "signature_header": "Stripe-Signature",
       "format": "t=<timestamp>,v1=<signature>",
       "algorithm": "HMAC-SHA256 with timestamp"
     },
     {
-      "source_type": "generic",
+      "validator_type": "generic",
       "description": "通用 HMAC-SHA256 簽名驗證",
       "signature_header": "X-Webhook-Signature",
       "format": "<hmac_signature>",

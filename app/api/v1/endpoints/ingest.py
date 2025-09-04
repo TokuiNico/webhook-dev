@@ -38,9 +38,6 @@ async def receive_webhook(
         JSONResponse: 接收確認響應
     """
     try:
-        # 獲取請求數據和簽名頭
-        body, signature_headers = await get_webhook_body_and_signature(request)
-
         # 獲取請求元數據
         client_ip = request.client.host if request.client else "unknown"
         content_type = request.headers.get("content-type", "application/octet-stream")
@@ -50,8 +47,7 @@ async def receive_webhook(
         result = await webhook_service.process_webhook(
             source_name=source_name,
             topic_name=topic_name,
-            body=body,
-            signature_headers=signature_headers,
+            body=await request.body(),
             content_type=content_type,
             headers=headers,
             source_ip=client_ip,

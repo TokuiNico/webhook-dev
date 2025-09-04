@@ -3,11 +3,11 @@ from pydantic import BaseModel, ConfigDict, field_validator, AfterValidator
 from typing import Optional
 from datetime import datetime
 
-from app.core.validators import validate_topic_name
+from app.core.validators import NameType
 
 
 class TopicBase(BaseModel):
-    name: Annotated[str, AfterValidator(validate_topic_name)]
+    name: NameType
     description: Optional[str] = None
 
 
@@ -16,17 +16,8 @@ class TopicCreate(TopicBase):
 
 
 class TopicUpdate(BaseModel):
-    name: Optional[str] = None
+    name: NameType | None = None
     description: Optional[str] = None
-
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, v):
-        if v is not None:
-            error = validate_topic_name(v)
-            if error:
-                raise ValueError(error)
-        return v
 
 
 class TopicResponse(TopicBase):

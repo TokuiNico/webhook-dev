@@ -4,10 +4,11 @@
 """
 
 import re
-from typing import Optional
+from typing_extensions import Annotated
+from pydantic import Field, AfterValidator
 
 
-def validate_name_format(name: str, field_name: str = "name") -> Optional[str]:
+def validate_name(name: str) -> str:
     """
     驗證 name 格式是否符合規範
 
@@ -24,48 +25,14 @@ def validate_name_format(name: str, field_name: str = "name") -> Optional[str]:
     Returns:
         Optional[str]: 如果驗證失敗返回錯誤訊息，成功返回 None
     """
-    if not name:
-        return f"{field_name} 不能為空"
-
-    if not isinstance(name, str):
-        return f"{field_name} 必須是字符串"
-
-    # 檢查名稱長度（最少 1 字符，最多 255 字符）
-    if len(name) < 1:
-        return f"{field_name} 長度不能少於 1 個字符"
-
-    if len(name) > 255:
-        return f"{field_name} 長度不能超過 255 個字符"
+    name = name.strip()
 
     # 檢查是否只包含允許的字符：小寫英文、數字、連字號、底線（不包含點號）
-    pattern = re.compile(r'^[a-z0-9_-]+$')
+    pattern = re.compile(r"^[a-z0-9_-]+$")
     if not pattern.match(name):
-        return f"{field_name} 只能包含小寫英文字母、數字、連字號(-)、底線(_)"
+        raise ValueError("只能包含小寫英文字母、數字、連字號(-)、底線(_)")
 
-    return None
-
-
-def validate_source_name(name: str) -> Optional[str]:
-    """
-    驗證 source name 格式
-
-    Args:
-        name: source 名稱
-
-    Returns:
-        Optional[str]: 如果驗證失敗返回錯誤訊息，成功返回 None
-    """
-    return validate_name_format(name, "來源名稱")
+    return name
 
 
-def validate_topic_name(name: str) -> Optional[str]:
-    """
-    驗證 topic name 格式
-
-    Args:
-        name: topic 名稱
-
-    Returns:
-        Optional[str]: 如果驗證失敗返回錯誤訊息，成功返回 None
-    """
-    return validate_name_format(name, "主題名稱")
+NameType = Annotated[str, Field(min_length=1, max_length=255, pattern=r"^[a-z0-9_-]+$", examples=['test-name']), AfterValidator(validate_name)]

@@ -28,7 +28,7 @@ class SignatureStrategy(ABC):
     def get_strategy_info(self) -> Dict[str, str]:
         """返回策略的詳細資訊，子類可以覆寫此方法提供更多資訊"""
         return {
-            "source_type": self.get_signature_header_key(),
+            "validator_type": self.get_signature_header_key(),
             "description": f"{self.get_signature_header_key()} 簽名驗證",
             "signature_header": f"X-{self.get_signature_header_key().title()}-Signature",
         }
@@ -50,9 +50,10 @@ class SignatureValidator:
         self._strategies: Dict[SignatureValidatorType, SignatureStrategy] = {
             SignatureValidatorType.GITHUB: GitHubSignatureStrategy(),
             SignatureValidatorType.STRIPE: StripeSignatureStrategy(),
+            SignatureValidatorType.GENERIC: GenericSignatureStrategy(),
         }
         # 預設策略
-        self._default_strategy = GenericSignatureStrategy()
+        self._default_validator_type = SignatureValidatorType.GENERIC
 
     def register_strategy(self, source_name: str, strategy: SignatureStrategy) -> None:
         """註冊新的簽名驗證策略
@@ -79,7 +80,7 @@ class SignatureValidator:
         self,
         validator_type: SignatureValidatorType,
         body: bytes,
-        signature_headers: Dict[str, Optional[str]],
+        headers: Dict[str, str],
         secret: str,
     ) -> bool:
         """
@@ -88,7 +89,7 @@ class SignatureValidator:
         Args:
             validator_type: 驗證類型
             body: 請求體
-            signature_headers: 簽名頭字典
+            headers: Request Header
             secret: 來源密鑰
 
         Returns:
@@ -96,11 +97,13 @@ class SignatureValidator:
         """
 
         # 選擇策略
-        strategy = self._strategies.get(validator_type, self._default_strategy)
+        strategy = self._strategies.get(
+            validator_type, self._strategies[self._default_validator_type]
+        )
 
         # 獲取對應的簽名 header
         header_key = strategy.get_signature_header_key()
-        signature = signature_headers.get(header_key)
+        signature = headers.get(header_key)
 
         if not signature:
             logger.warning(

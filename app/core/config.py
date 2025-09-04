@@ -10,7 +10,10 @@ class Settings(BaseSettings):
     # Development settings
     DEVELOPMENT: bool = True
     USE_SQLITE: bool = True  # Use SQLite for development
-    DISABLE_BROKER: bool = True  # 在開發環境跳過 broker 啟動
+
+    # TaskIQ settings
+    USE_MEMORY_BROKER: bool = True  # 測試環境使用 InMemoryBroker
+    REDIS_URL: str = "redis://localhost:6379/0"  # 用於開發時的 result backend
 
     # Security settings
     API_KEY: str = "your-api-key"
