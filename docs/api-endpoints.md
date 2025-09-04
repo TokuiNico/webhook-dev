@@ -120,6 +120,56 @@ curl -X POST \
 
 ---
 
+## 🔧 **系統資訊**
+
+### GET `/api/v1/manage/signature-validators/`
+
+獲取系統支援的簽名驗證器資訊。
+
+**特色：**
+- 🔄 **動態獲取**: 資訊直接從實際程式碼中的簽名策略獲取
+- 🔧 **自動同步**: 當程式碼新增或移除策略時，API 回應會自動更新
+- 📊 **即時反映**: 確保 API 文檔與實際系統能力一致
+
+**回應：**
+```json
+{
+  "supported_sources": ["github", "stripe", "generic"],
+  "total_validators": 3,
+  "validators": [
+    {
+      "source_type": "github",
+      "description": "GitHub webhook 簽名驗證",
+      "signature_header": "X-Hub-Signature-256",
+      "format": "sha256=<hmac_signature>",
+      "algorithm": "HMAC-SHA256"
+    },
+    {
+      "source_type": "stripe",
+      "description": "Stripe webhook 簽名驗證",
+      "signature_header": "Stripe-Signature",
+      "format": "t=<timestamp>,v1=<signature>",
+      "algorithm": "HMAC-SHA256 with timestamp"
+    },
+    {
+      "source_type": "generic",
+      "description": "通用 HMAC-SHA256 簽名驗證",
+      "signature_header": "X-Webhook-Signature",
+      "format": "<hmac_signature>",
+      "algorithm": "HMAC-SHA256"
+    }
+  ]
+}
+```
+
+**使用範例：**
+```bash
+curl -H "Authorization: Bearer your-api-key" \
+  http://localhost:8000/api/v1/manage/signature-validators/
+```
+
+---
+
 ## 📊 **統計數據**
 
 ### GET `/api/v1/stats/overview`

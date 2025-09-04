@@ -181,6 +181,12 @@ curl -H "Authorization: Bearer your-api-key" \
   http://localhost:8000/api/v1/stats/overview
 ```
 
+### 查看支援的簽名驗證器
+```bash
+curl -H "Authorization: Bearer your-api-key" \
+  http://localhost:8000/api/v1/manage/signature-validators/
+```
+
 ### 查看日誌
 ```bash
 # Docker 部署

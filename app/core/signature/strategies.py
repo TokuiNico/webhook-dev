@@ -21,6 +21,15 @@ class GitHubSignatureStrategy(SignatureStrategy):
     def verify(self, body: bytes, signature: str, secret: str) -> bool:
         return verify_webhook_signature(body, signature, secret)
 
+    def get_strategy_info(self) -> dict[str, str]:
+        return {
+            "source_type": "github",
+            "description": "GitHub webhook 簽名驗證",
+            "signature_header": "X-Hub-Signature-256",
+            "format": "sha256=<hmac_signature>",
+            "algorithm": "HMAC-SHA256"
+        }
+
 
 class StripeSignatureStrategy(SignatureStrategy):
     """Stripe 簽名驗證策略"""
@@ -31,6 +40,15 @@ class StripeSignatureStrategy(SignatureStrategy):
     def verify(self, body: bytes, signature: str, secret: str) -> bool:
         return verify_stripe_signature(body, signature, secret)
 
+    def get_strategy_info(self) -> dict[str, str]:
+        return {
+            "source_type": "stripe",
+            "description": "Stripe webhook 簽名驗證",
+            "signature_header": "Stripe-Signature",
+            "format": "t=<timestamp>,v1=<signature>",
+            "algorithm": "HMAC-SHA256 with timestamp"
+        }
+
 
 class GenericSignatureStrategy(SignatureStrategy):
     """通用簽名驗證策略（預設）"""
@@ -40,3 +58,12 @@ class GenericSignatureStrategy(SignatureStrategy):
 
     def verify(self, body: bytes, signature: str, secret: str) -> bool:
         return verify_webhook_signature(body, signature, secret)
+
+    def get_strategy_info(self) -> dict[str, str]:
+        return {
+            "source_type": "generic",
+            "description": "通用 HMAC-SHA256 簽名驗證",
+            "signature_header": "X-Webhook-Signature",
+            "format": "<hmac_signature>",
+            "algorithm": "HMAC-SHA256"
+        }

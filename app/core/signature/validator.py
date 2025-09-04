@@ -25,6 +25,14 @@ class SignatureStrategy(ABC):
         """驗證簽名"""
         pass
 
+    def get_strategy_info(self) -> Dict[str, str]:
+        """返回策略的詳細資訊，子類可以覆寫此方法提供更多資訊"""
+        return {
+            "source_type": self.get_signature_header_key(),
+            "description": f"{self.get_signature_header_key()} 簽名驗證",
+            "signature_header": f"X-{self.get_signature_header_key().title()}-Signature"
+        }
+
 
 class SignatureValidator:
     """簽名驗證器，支援可擴展的簽名驗證策略"""
@@ -54,6 +62,13 @@ class SignatureValidator:
     def get_supported_sources(self) -> list[str]:
         """獲取所有支援的來源列表"""
         return list(self._strategies.keys())
+
+    def get_validator_info(self) -> Dict[str, Dict[str, str]]:
+        """獲取所有驗證器的詳細資訊"""
+        validator_info = {}
+        for source_name, strategy in self._strategies.items():
+            validator_info[source_name] = strategy.get_strategy_info()
+        return validator_info
 
     def validate_signature(
         self,

@@ -9,6 +9,7 @@ from typing import List, Optional
 
 from app.api.v1.deps import get_authenticated_db
 from app.services.topic_service import source_service, topic_service
+from app.services.webhook_service import webhook_service
 from app.schemas.topic import TopicCreate, TopicResponse
 from app.schemas.source import SourceCreate, SourceResponse
 
@@ -115,3 +116,47 @@ async def get_topic(
 ) -> dict:
     """獲取特定主題的詳細信息"""
     return await topic_service.get_topic_by_id(topic_id, db)
+
+# Signature validators info endpoint
+@router.get("/signature-validators/")
+async def get_signature_validators():
+    """
+    獲取系統支援的簽名驗證器資訊
+
+    **動態從實際程式碼獲取資訊**
+    - 自動檢測已註冊的簽名驗證策略
+    - 從各策略獲取詳細的配置資訊
+    - 確保資訊與實際程式碼同步
+
+    **回應格式：**
+    ```json
+    {
+        "supported_sources": ["github", "stripe", "generic"],
+        "total_validators": 3,
+        "validators": [
+            {
+                "source_type": "github",
+                "description": "GitHub webhook 簽名驗證",
+                "signature_header": "X-Hub-Signature-256",
+                "format": "sha256=<hmac_signature>",
+                "algorithm": "HMAC-SHA256"
+            }
+        ]
+    }
+    ```
+    """
+    # 從實際的簽名驗證器動態獲取資訊
+    supported_sources = webhook_service.signature_validator.get_supported_sources()
+    validator_info = webhook_service.signature_validator.get_validator_info()
+
+    # 將驗證器資訊轉換為列表格式
+    validators = []
+    for source in supported_sources:
+        if source in validator_info:
+            validators.append(validator_info[source])
+
+    return {
+        "supported_sources": supported_sources,
+        "total_validators": len(validators),
+        "validators": validators
+    }
