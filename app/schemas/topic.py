@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class TopicBase(BaseModel):
-    name: str  # 移除 NameType 限制，允許任意名稱
+    name: str
     description: Optional[str] = None
 
 

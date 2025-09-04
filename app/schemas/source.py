@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class SourceBase(BaseModel):
-    name: str  # 移除 NameType 限制，允許任意名稱
+    name: str
     secret: str
     auth_type: Literal["signature", "none"] = "none"  # 認證類型
     auth_config: Optional[Dict[str, Any]] = None  # 認證配置 (JSON)
