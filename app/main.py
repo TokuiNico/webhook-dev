@@ -4,6 +4,7 @@ from app.db.base import Base
 from app.db.session import engine
 from app.api.v1 import api_router
 from app.taskiq.broker_manager import taskiq_broker_manager
+from app.core.error_handler import create_exception_handlers
 import logging
 
 # 新增：安全中介與指標
@@ -34,6 +35,11 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# 添加異常處理器
+exception_handlers = create_exception_handlers()
+for exc_type, handler in exception_handlers.items():
+    app.add_exception_handler(exc_type, handler)
 
 # 掛載安全中介
 app.add_middleware(RateLimitMiddleware)
