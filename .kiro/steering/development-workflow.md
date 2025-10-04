@@ -36,17 +36,29 @@ uv run ruff format app/
 
 ### Running Tests
 ```bash
-# Run all tests
+# Run all tests (using the testing script wrapper)
+uv run python scripts/run_tests.py
+
+# Run all tests (direct pytest command)
 uv run python -m pytest tests/ -v
 
 # Run specific test file
 uv run python -m pytest tests/test_webhook_service.py -v
 
-# Run with coverage
+# Run with coverage (using testing script - requires 80% coverage)
+uv run python scripts/run_tests.py
+
+# Run with coverage (direct pytest - uses 30% minimum)
 uv run python -m pytest tests/ --cov=app --cov-report=html
 
 # Run end-to-end tests
 uv run python scripts/e2e_webhook_test.py
+
+# Run only unit tests (marked with @pytest.mark.unit)
+uv run python -m pytest tests/ -m unit -v
+
+# Run integration tests (marked with @pytest.mark.integration)
+uv run python -m pytest tests/ -m integration -v
 ```
 
 ### Code Quality Tools

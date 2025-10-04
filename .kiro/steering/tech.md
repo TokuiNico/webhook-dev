@@ -32,6 +32,7 @@
 - **Docker & Docker Compose**: Containerized deployment
 - **uvicorn**: ASGI server for production deployment
 - **Environment-based Configuration**: Flexible config management
+- **Testing Framework**: pytest with async support, coverage reporting, and test factories
 
 ## Architecture Patterns
 
@@ -73,10 +74,13 @@ async def process_webhook_event(event_log_id: str) -> None:
 ```
 
 ### Error Handling Strategy
-- HTTP exceptions for API errors: `raise HTTPException(status_code=404, detail="Not found")`
-- Proper logging before raising exceptions
-- Graceful degradation with retry mechanisms
-- Comprehensive error responses with meaningful messages
+- **HTTP exceptions for API errors**: `raise HTTPException(status_code=404, detail="Not found")`
+- **Custom exception classes**: Domain-specific exceptions in `app.core.exceptions`
+- **Global exception handlers**: Centralized error handling in `app.core.error_handler`
+- **Proper logging before raising exceptions**: Structured logging with context
+- **Graceful degradation with retry mechanisms**: TaskIQ retry policies for failed tasks
+- **Comprehensive error responses**: Consistent error response format across all endpoints
+- **Error tracking and monitoring**: Integration with metrics collection for error rates
 
 ### Security Architecture
 - **AuthenticationValidator**: Centralized auth validation
@@ -93,10 +97,13 @@ async def process_webhook_event(event_log_id: str) -> None:
 - **Import Organization**: Standard library → Third-party → Local imports
 
 ### Testing Strategy
-- **Unit Tests**: Individual component testing
-- **Integration Tests**: Full workflow testing
-- **E2E Tests**: Complete webhook processing validation
-- **Test Data Management**: Automated test data setup and teardown
+- **Unit Tests**: Individual component testing with pytest
+- **Integration Tests**: Full workflow testing including API endpoints
+- **E2E Tests**: Complete webhook processing validation with dedicated scripts
+- **Test Data Management**: Automated test data setup and teardown with factories
+- **Async Testing**: Full support for async test functions with pytest-asyncio
+- **Coverage Reporting**: HTML coverage reports with pytest-cov integration
+- **Test Factories**: Consistent test data generation using factory patterns
 
 ### API Design
 - **RESTful Endpoints**: Consistent URL patterns
