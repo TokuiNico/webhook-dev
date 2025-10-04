@@ -47,6 +47,8 @@ Kiro-style Spec Driven Development implementation on AI-DLC (AI Development Life
 5. **Update task status**: Mark tasks as completed when working on them
 6. **Keep steering current**: Run `/kiro/steering` after significant changes
 7. **Check spec compliance**: Use `/kiro/spec-status` to verify alignment
+8. **Use uv for Python**: Always use `uv` to run Python applications and manage dependencies. Use `uv run` instead of direct Python execution to ensure proper virtual environment and dependency management
+9. **Manage development servers**: Ensure only one instance of each development server (frontend/backend) is running. Stop duplicate servers to avoid port conflicts and resource waste
 
 ## Steering Configuration
 
