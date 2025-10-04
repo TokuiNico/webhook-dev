@@ -116,7 +116,6 @@ class DispatchLog(Base):
     subscription_id = Column(
         String(255), ForeignKey("subscriptions.id"), nullable=False
     )
-    attempt = Column(Integer, default=1)
     status = Column(Enum(DispatchLogStatus))
     response_status_code = Column(Integer)
     response_body = Column(Text)

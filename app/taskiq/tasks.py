@@ -4,31 +4,25 @@ TaskIQ 任務定義
 """
 
 import logging
-from datetime import datetime
 from typing import Dict, Any
 
 import httpx
 
-from app.db.models import DispatchLog, DispatchLogStatus
+from app.db.models import DispatchLogStatus
 from app.db.session import AsyncSessionLocal
 from app.taskiq.broker_manager import broker
 
 logger = logging.getLogger(__name__)
 
 
-@broker.task(task_name="send_webhook_to_subscription")
+@broker.task(retry_on_error=True)
 async def send_webhook_to_subscription(
-    event_log_id: int,
-    subscription_id: int,
-    subscriber_name: str,
+    event_log_id: str,
+    subscription_id: str,
     target_url: str,
-    topic_name: str,
-    source_name: str,
     payload: str,
     content_type: str,
     headers: Dict[str, Any],
-    source_ip: str,
-    attempt: int = 1,
 ) -> Dict[str, Any]:
     """
     發送 webhook 到特定訂閱者
@@ -36,7 +30,6 @@ async def send_webhook_to_subscription(
     Args:
         event_log_id: 事件記錄 ID
         subscription_id: 訂閱 ID
-        subscriber_name: 訂閱者名稱
         target_url: 目標 URL
         topic_name: 主題名稱
         source_name: 來源名稱
@@ -50,12 +43,11 @@ async def send_webhook_to_subscription(
         Dict[str, Any]: 分發結果
     """
     logger.info(
-        f"🚀 分發 webhook 到 {target_url} (訂閱者: {subscriber_name}, 嘗試: {attempt})"
+        f"🚀 分發 webhook 到 {target_url} (訂閱者: {subscription_id})"
     )
 
-    start_time = datetime.utcnow()
-    success = False
-    status_code = None
+    status = DispatchLogStatus.SUCCESS
+    status_code = 0
     response_body = ""
     error_message = ""
 
@@ -72,10 +64,7 @@ async def send_webhook_to_subscription(
         # 添加 webhook 相關的識別頭
         request_headers.update(
             {
-                "X-Webhook-Source": source_name,
-                "X-Webhook-Topic": topic_name,
                 "X-Webhook-Event-Id": str(event_log_id),
-                "X-Webhook-Attempt": str(attempt),
             }
         )
 
@@ -87,97 +76,71 @@ async def send_webhook_to_subscription(
             )
 
             status_code = response.status_code
-            success = status_code < 400
+            if response.is_error:
+                status = DispatchLogStatus.FAILED
             response_body = response.text[:1000]  # 限制響應體大小
 
-            if success:
+            if status == DispatchLogStatus.SUCCESS:
                 logger.info(
                     f"✅ 成功分發 webhook 到 {target_url} "
-                    f"(狀態碼: {status_code}, 訂閱者: {subscriber_name})"
+                    f"(狀態碼: {status_code}, 訂閱者: {subscription_id})"
                 )
             else:
                 logger.warning(
                     f"⚠️ Webhook 回應非成功狀態碼: {status_code} "
-                    f"到 {target_url} (訂閱者: {subscriber_name})"
+                    f"到 {target_url} (訂閱者: {subscription_id})"
                 )
                 error_message = f"HTTP {status_code}: {response_body[:200]}"
 
     except httpx.TimeoutException as e:
-        logger.error(f"⏰ 請求超時到 {target_url} (訂閱者: {subscriber_name}): {e}")
+        logger.error(f"⏰ 請求超時到 {target_url} (訂閱者: {subscription_id}): {e}")
         error_message = f"Request timeout: {str(e)}"
 
     except httpx.RequestError as e:
         logger.error(
-            f"🌐 網路錯誤發送 webhook 到 {target_url} (訂閱者: {subscriber_name}): {e}"
+            f"🌐 網路錯誤發送 webhook 到 {target_url} (訂閱者: {subscription_id}): {e}"
         )
         error_message = f"Network error: {str(e)}"
 
     except Exception as e:
         logger.error(
-            f"💥 未預期錯誤發送 webhook 到 {target_url} (訂閱者: {subscriber_name}): {e}"
+            f"💥 未預期錯誤發送 webhook 到 {target_url} (訂閱者: {subscription_id}): {e}"
         )
         error_message = f"Unexpected error: {str(e)}"
+
+    response_body = response_body or error_message
 
     # 記錄分發結果到數據庫
     try:
         await log_dispatch_result(
             event_log_id=event_log_id,
             subscription_id=subscription_id,
-            attempt=attempt,
-            success=success,
+            status=status,
             status_code=status_code,
             response_body=response_body,
-            error_message=error_message,
-            dispatched_at=start_time,
         )
     except Exception as log_error:
         # 如果日誌記錄失敗，不影響主要任務流程
         logger.warning(f"📝 記錄分發結果失敗（但任務繼續）: {log_error}")
 
-    # 如果失敗，考慮重試（簡化版本）
-    if not success and attempt < 3:
-        # 重試條件：網路錯誤或 5xx 伺服器錯誤
-        should_retry = (
-            status_code is None  # 網路錯誤
-            or status_code >= 500  # 伺服器錯誤
-            or status_code == 429  # 太多請求
-        )
 
-        if should_retry:
-            logger.info(f"🔄 安排重試任務 (嘗試 {attempt + 1}/3)")
-            # 安排重試任務
-            await send_webhook_to_subscription.kiq(
-                event_log_id=event_log_id,
-                subscription_id=subscription_id,
-                subscriber_name=subscriber_name,
-                target_url=target_url,
-                topic_name=topic_name,
-                source_name=source_name,
-                payload=payload,
-                content_type=content_type,
-                headers=headers,
-                source_ip=source_ip,
-                attempt=attempt + 1,
-            )
+    if status == DispatchLogStatus.FAILED:
+        raise RuntimeError(error_message)
 
     return {
-        "success": success,
+        "status": status.value,
         "status_code": status_code,
         "response_body": response_body,
         "error_message": error_message,
-        "attempt": attempt,
     }
 
 
 async def log_dispatch_result(
-    event_log_id: int,
-    subscription_id: int,
-    attempt: int,
-    success: bool,
-    status_code: int = None,
+    event_log_id: str,
+    subscription_id: str,
+    status: DispatchLogStatus,
+    status_code: int = 0,
     response_body: str = "",
-    error_message: str = "",
-    dispatched_at: datetime = None,
 ) -> None:
     """
     記錄分發結果到數據庫
@@ -185,34 +148,28 @@ async def log_dispatch_result(
     Args:
         event_log_id: 事件記錄 ID
         subscription_id: 訂閱 ID
-        attempt: 嘗試次數
-        success: 是否成功
+        status: 狀態
         status_code: HTTP 狀態碼
         response_body: 響應內容
         error_message: 錯誤信息
         dispatched_at: 分發時間
     """
+    from app.services.log_service import log_service
     try:
         async with AsyncSessionLocal() as db:
-            dispatch_log = DispatchLog(
+            await log_service.create_dispatch_log(
+                db=db,
                 event_log_id=event_log_id,
                 subscription_id=subscription_id,
-                attempt=attempt,
-                status=DispatchLogStatus.SUCCESS
-                if success
-                else DispatchLogStatus.FAILED,
-                response_status_code=status_code or 0,
-                response_body=response_body or error_message,
-                dispatched_at=dispatched_at or datetime.utcnow(),
+                status=status,
+                response_status_code=status_code,
+                response_body=response_body,
             )
-
-            db.add(dispatch_log)
-            await db.commit()
 
             logger.info(
                 f"📝 已記錄分發結果: 事件 {event_log_id}, "
-                f"訂閱 {subscription_id}, 嘗試 {attempt}, "
-                f"狀態: {'成功' if success else '失敗'}"
+                f"訂閱 {subscription_id}, "
+                f"狀態: {status.value}"
             )
 
     except Exception as e:

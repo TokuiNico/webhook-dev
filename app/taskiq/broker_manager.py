@@ -5,6 +5,7 @@ TaskIQ Broker Manager - 統一管理 TaskIQ broker 的開發和生產模式
 import logging
 from typing import List, Optional
 
+from taskiq.middlewares import SmartRetryMiddleware
 from taskiq import InMemoryBroker, TaskiqMiddleware
 from taskiq_aio_pika import AioPikaBroker
 
@@ -41,10 +42,12 @@ class TaskiqBrokerManager:
         if self._broker is None:
             if self._is_development:
                 logger.info("🔧 使用 InMemoryBroker 進行開發測試")
-                self._broker = InMemoryBroker()
+                self._broker = InMemoryBroker().with_middlewares(SmartRetryMiddleware())
             else:
                 logger.info("🚀 使用 AioPikaBroker 連接 RabbitMQ")
-                self._broker = AioPikaBroker(settings.RABBITMQ_URL)
+                self._broker = AioPikaBroker(settings.RABBITMQ_URL).with_middlewares(
+                    SmartRetryMiddleware()
+                )
 
         return self._broker
 

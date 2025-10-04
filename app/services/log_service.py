@@ -5,7 +5,7 @@
 
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, func
+from sqlalchemy import select, desc, func, update
 from fastapi import HTTPException
 from app.db.models import EventLog, DispatchLog, EventLogStatus, DispatchLogStatus
 from app.schemas.log import (
@@ -98,6 +98,66 @@ class LogService:
 
         return EventLogResponse.model_validate(event)
 
+    async def create_event_log(
+        self,
+        db: AsyncSession,
+        topic_id: str,
+        content_type: str,
+        payload: str,
+        headers: dict[str, str],
+        source_ip: str,
+        status: EventLogStatus,
+    ) -> EventLog:
+        """
+        創建事件記錄
+
+        Args:
+            topic_id: 主題 ID
+            content_type: 內容類型
+            payload: 請求體內容
+            headers: 請求頭
+            source_ip: 來源IP
+            status: 事件狀態
+            db: 數據庫會話
+
+        Returns:
+            EventLog: 創建的事件記錄
+        """
+        # 將 headers 標準化為小寫鍵的字典，並確保值為字串
+        normalized_headers = {str(k).lower(): str(v) for k, v in headers.items()}
+
+        event_log = EventLog(
+            topic_id=topic_id,
+            content_type=content_type,
+            payload=payload,
+            headers=normalized_headers,
+            source_ip=source_ip,
+            status=status,  # 使用枚舉的值
+        )
+
+        db.add(event_log)
+        await db.commit()
+        await db.refresh(event_log)
+
+        return event_log
+
+    async def update_event_status(
+        self, event_log: EventLog, status: EventLogStatus, db: AsyncSession
+    ) -> None:
+        """
+        更新事件狀態
+
+        Args:
+            event_log: 事件記錄
+            status: 新狀態
+            db: 數據庫會話
+        """
+        # 使用 SQLAlchemy 更新記錄
+        await db.execute(
+            update(EventLog).where(EventLog.id == event_log.id).values(status=status)
+        )
+        await db.commit()
+
     async def get_dispatch_logs(
         self,
         db: AsyncSession,
@@ -184,6 +244,30 @@ class LogService:
             raise HTTPException(status_code=404, detail="派發日誌不存在")
 
         return DispatchLogResponse.model_validate(dispatch)
+
+    async def create_dispatch_log(
+        self,
+        db: AsyncSession,
+        event_log_id: str,
+        subscription_id: str,
+        status: DispatchLogStatus,
+        response_status_code: int,
+        response_body: str,
+    ) -> DispatchLog:
+        """
+        創建派發日誌
+        """
+        dispatch_log = DispatchLog(
+            event_log_id=event_log_id,
+            subscription_id=subscription_id,
+            status=status,
+            response_status_code=response_status_code,
+            response_body=response_body,
+        )
+        db.add(dispatch_log)
+        await db.commit()
+        await db.refresh(dispatch_log)
+        return dispatch_log
 
 
 # 創建服務實例
