@@ -94,7 +94,7 @@ export interface UnifiedLogItem {
   id: string
   type: 'event' | 'dispatch'
   timestamp: string
-  status: string
+  status: string | null
   topic_id?: string
   subscription_id?: string
   source_ip?: string

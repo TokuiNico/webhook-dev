@@ -95,7 +95,9 @@ export const LogList = ({
   }
 
   // 獲取狀態顏色
-  const getStatusColor = (status: string): string => {
+  const getStatusColor = (status: string | null | undefined): string => {
+    if (!status || typeof status !== 'string') return 'text-gray-600 bg-gray-100'
+
     if (status.includes('SUCCESS')) return 'text-green-600 bg-green-100'
     if (status.includes('FAILED') || status.includes('TIMEOUT')) return 'text-red-600 bg-red-100'
     if (status.includes('PENDING')) return 'text-yellow-600 bg-yellow-100'
@@ -178,7 +180,7 @@ export const LogList = ({
 
                   {/* 狀態標籤 */}
                   <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(log.status)}`}>
-                    {log.status}
+                    {log.status || '未知'}
                   </span>
 
                   {/* 基本信息 */}
