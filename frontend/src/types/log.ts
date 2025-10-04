@@ -100,6 +100,8 @@ export interface UnifiedLogItem {
   source_ip?: string
   response_status_code?: number
   error_message?: string
+  // 詳細資料（可選，展開時加載）
+  detailedData?: EventLog | DispatchLog
 }
 
 // 綜合日誌列表響應

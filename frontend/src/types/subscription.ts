@@ -69,10 +69,10 @@ export interface SubscriptionUpdate {
 
 // 訂閱統計數據
 export interface SubscriptionStats {
-  subscription_id: string
-  event_count: number
-  last_delivery?: string
+  total_dispatches: number
+  successful_dispatches: number
   success_rate: number
+  last_activity?: string
 }
 
 // 訂閱詳情響應（包含統計）

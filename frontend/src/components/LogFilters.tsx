@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import type { EventLogStatus, DispatchLogStatus } from '../types/log'
+import { useState, useEffect } from 'react'
+import type { EventLogStatus } from '../types/log'
 
 interface LogFiltersProps {
   /** 篩選類型 */
@@ -10,6 +10,8 @@ interface LogFiltersProps {
   onFiltersChange: (filters: any) => void
   /** 搜尋回調 */
   onSearch?: (query: string) => void
+  /** 當前搜尋查詢 */
+  searchQuery?: string
   /** 自定義 CSS 類名 */
   className?: string
 }
@@ -23,29 +25,37 @@ export const LogFilters = ({
   currentFilters,
   onFiltersChange,
   onSearch,
+  searchQuery: externalSearchQuery = '',
   className = ''
 }: LogFiltersProps) => {
-  const [searchQuery, setSearchQuery] = useState('')
+  const [internalSearchQuery, setInternalSearchQuery] = useState('')
   const [dateRange, setDateRange] = useState({
     from: '',
     to: ''
   })
 
+  // 同步外部搜尋查詢到內部狀態
+  useEffect(() => {
+    if (externalSearchQuery !== internalSearchQuery) {
+      setInternalSearchQuery(externalSearchQuery)
+    }
+  }, [externalSearchQuery])
+
   // 事件日誌狀態選項
-  const eventStatusOptions: { value: EventLogStatus | '', label: string }[] = [
-    { value: '', label: '全部狀態' },
-    { value: 'RECEIVED', label: '已接收' },
-    { value: 'QUEUED', label: '已排隊' },
-    { value: 'FAILED_VALIDATION', label: '驗證失敗' }
+  const eventStatusOptions: { value: EventLogStatus | '', label: string, icon: string, color: string }[] = [
+    { value: '', label: '全部狀態', icon: '📋', color: 'text-gray-600' },
+    { value: 'RECEIVED', label: '已接收', icon: '📥', color: 'text-blue-600' },
+    { value: 'QUEUED', label: '已排隊', icon: '⏳', color: 'text-yellow-600' },
+    { value: 'FAILED_VALIDATION', label: '驗證失敗', icon: '❌', color: 'text-red-600' }
   ]
 
   // 派發日誌狀態選項
-  const dispatchStatusOptions: { value: DispatchLogStatus | '', label: string }[] = [
-    { value: '', label: '全部狀態' },
-    { value: 'PENDING', label: '待處理' },
-    { value: 'SUCCESS', label: '成功' },
-    { value: 'FAILED', label: '失敗' },
-    { value: 'TIMEOUT', label: '超時' }
+  const dispatchStatusOptions: { value: string | '', label: string, icon: string, color: string }[] = [
+    { value: '', label: '全部狀態', icon: '📋', color: 'text-gray-600' },
+    { value: 'SUCCESS', label: '成功', icon: '✅', color: 'text-green-600' },
+    { value: 'QUEUED', label: '已排隊', icon: '⏳', color: 'text-yellow-600' },
+    { value: 'FAILED', label: '失敗', icon: '❌', color: 'text-red-600' },
+    { value: 'TIMEOUT', label: '超時', icon: '⏰', color: 'text-orange-600' }
   ]
 
   // 處理狀態篩選變更
@@ -100,17 +110,48 @@ export const LogFilters = ({
   // 處理搜尋
   const handleSearch = () => {
     if (onSearch) {
-      onSearch(searchQuery.trim())
+      onSearch(internalSearchQuery.trim())
     }
   }
 
   // 清除所有篩選條件
   const clearAllFilters = () => {
-    setSearchQuery('')
+    setInternalSearchQuery('')
     setDateRange({ from: '', to: '' })
+    if (onSearch) {
+      onSearch('') // 清除外部搜尋
+    }
     onFiltersChange({
       skip: 0,
       limit: currentFilters.limit || 20
+    })
+  }
+
+  // 快速時間篩選
+  const applyQuickTimeFilter = (hours: number) => {
+    const now = new Date()
+    const past = new Date(now.getTime() - hours * 60 * 60 * 1000)
+
+    const newDateRange = {
+      from: past.toISOString().slice(0, 16), // 移除秒數和毫秒
+      to: now.toISOString().slice(0, 16)
+    }
+
+    setDateRange(newDateRange)
+    onFiltersChange({
+      ...currentFilters,
+      date_from: newDateRange.from,
+      date_to: newDateRange.to,
+      skip: 0
+    })
+  }
+
+  // 快速狀態篩選
+  const applyQuickStatusFilter = (status: string) => {
+    onFiltersChange({
+      ...currentFilters,
+      status: status || undefined,
+      skip: 0
     })
   }
 
@@ -123,7 +164,7 @@ export const LogFilters = ({
       currentFilters.source_ip ||
       currentFilters.date_from ||
       currentFilters.date_to ||
-      searchQuery.trim()
+      (externalSearchQuery || internalSearchQuery).trim()
     )
   }
 
@@ -152,8 +193,17 @@ export const LogFilters = ({
               <input
                 type="text"
                 id="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={internalSearchQuery}
+                onChange={(e) => {
+                  const value = e.target.value
+                  setInternalSearchQuery(value)
+                  // 當用戶開始編輯時，如果有外部搜尋查詢，需要清除它
+                  if (externalSearchQuery && value !== externalSearchQuery) {
+                    if (onSearch) {
+                      onSearch('') // 清除外部搜尋，讓用戶可以自由編輯
+                    }
+                  }
+                }}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="搜尋日誌 ID、狀態、錯誤訊息..."
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -186,7 +236,7 @@ export const LogFilters = ({
           >
             {(filterType === 'events' ? eventStatusOptions : dispatchStatusOptions).map(option => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {option.icon} {option.label}
               </option>
             ))}
           </select>
@@ -272,6 +322,56 @@ export const LogFilters = ({
         </div>
       </div>
 
+      {/* 快速篩選按鈕 */}
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-medium text-gray-900">快速篩選</h4>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {/* 時間快速篩選 */}
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-gray-500 mr-2">時間:</span>
+            <button
+              onClick={() => applyQuickTimeFilter(1)}
+              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
+              title="最近1小時"
+            >
+              1小時
+            </button>
+            <button
+              onClick={() => applyQuickTimeFilter(24)}
+              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
+              title="最近24小時"
+            >
+              24小時
+            </button>
+            <button
+              onClick={() => applyQuickTimeFilter(168)}
+              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
+              title="最近7天"
+            >
+              7天
+            </button>
+          </div>
+
+          {/* 狀態快速篩選 */}
+          {(filterType === 'events' ? eventStatusOptions : dispatchStatusOptions)
+            .filter(option => option.value) // 過濾掉"全部狀態"
+            .map(option => (
+              <button
+                key={option.value}
+                onClick={() => applyQuickStatusFilter(option.value)}
+                className="px-2 py-1 text-xs bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded transition-colors flex items-center gap-1"
+                title={`只顯示${option.label}`}
+              >
+                <span>{option.icon}</span>
+                <span>{option.label}</span>
+              </button>
+            ))}
+        </div>
+      </div>
+
       {/* 活躍篩選條件顯示 */}
       {hasActiveFilters() && (
         <div className="mt-4 pt-4 border-t border-gray-200">
@@ -280,7 +380,11 @@ export const LogFilters = ({
 
             {currentFilters.status && (
               <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                狀態: {currentFilters.status}
+                {(filterType === 'events' ? eventStatusOptions : dispatchStatusOptions)
+                  .find(opt => opt.value === currentFilters.status)?.icon || '📋'} 狀態: {
+                  (filterType === 'events' ? eventStatusOptions : dispatchStatusOptions)
+                    .find(opt => opt.value === currentFilters.status)?.label || currentFilters.status
+                }
                 <button
                   onClick={() => handleStatusChange('')}
                   className="ml-1 text-blue-600 hover:text-blue-800"
@@ -292,7 +396,7 @@ export const LogFilters = ({
 
             {currentFilters.topic_id && (
               <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                主題: {currentFilters.topic_id.slice(-8)}...
+                📌 主題: <code className="bg-green-200 px-1 rounded text-xs">{currentFilters.topic_id.slice(-8)}...</code>
                 <button
                   onClick={() => handleTopicIdChange('')}
                   className="ml-1 text-green-600 hover:text-green-800"
@@ -304,7 +408,7 @@ export const LogFilters = ({
 
             {currentFilters.subscription_id && (
               <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
-                訂閱: {currentFilters.subscription_id.slice(-8)}...
+                🔗 訂閱: <code className="bg-purple-200 px-1 rounded text-xs">{currentFilters.subscription_id.slice(-8)}...</code>
                 <button
                   onClick={() => handleSubscriptionIdChange('')}
                   className="ml-1 text-purple-600 hover:text-purple-800"
@@ -316,7 +420,7 @@ export const LogFilters = ({
 
             {currentFilters.source_ip && (
               <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
-                IP: {currentFilters.source_ip}
+                🌐 IP: <code className="bg-orange-200 px-1 rounded text-xs">{currentFilters.source_ip}</code>
                 <button
                   onClick={() => handleSourceIpChange('')}
                   className="ml-1 text-orange-600 hover:text-orange-800"
@@ -328,7 +432,7 @@ export const LogFilters = ({
 
             {(dateRange.from || dateRange.to) && (
               <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-                日期: {dateRange.from || '...'} ~ {dateRange.to || '...'}
+                📅 日期範圍
                 <button
                   onClick={() => {
                     handleDateRangeChange('from', '')
@@ -341,12 +445,12 @@ export const LogFilters = ({
               </span>
             )}
 
-            {searchQuery.trim() && (
+            {(externalSearchQuery || internalSearchQuery).trim() && (
               <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
-                搜尋: "{searchQuery}"
+                🔍 搜尋: <code className="bg-yellow-200 px-1 rounded text-xs">"{externalSearchQuery || internalSearchQuery}"</code>
                 <button
                   onClick={() => {
-                    setSearchQuery('')
+                    setInternalSearchQuery('')
                     if (onSearch) onSearch('')
                   }}
                   className="ml-1 text-yellow-600 hover:text-yellow-800"

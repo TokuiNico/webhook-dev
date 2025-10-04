@@ -8,12 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from fastapi import HTTPException, status
 
-from app.db.models import Subscription, Topic
+from app.db.models import Subscription, Topic, DispatchLog, DispatchLogStatus
 from app.schemas.subscription import (
     SubscriptionCreate,
     SubscriptionUpdate,
     SubscriptionResponse,
     SubscriptionList,
+    SubscriptionStats,
 )
 
 
@@ -204,6 +205,57 @@ class SubscriptionService:
         await db.commit()
 
         return {"message": f"訂閱 {subscription_id} 已成功啟用"}
+
+    async def get_subscription_stats(
+        self, db: AsyncSession, subscription_id: str
+    ) -> SubscriptionStats:
+        """
+        獲取訂閱的統計數據
+
+        Args:
+            db: 數據庫會話
+            subscription_id: 訂閱 ID
+
+        Returns:
+            SubscriptionStats: 訂閱統計數據
+
+        Raises:
+            HTTPException: 當訂閱不存在時
+        """
+        # 驗證訂閱是否存在
+        await self._get_subscription_or_404(subscription_id, db)
+
+        # 統計總派發次數
+        total_query = select(func.count(DispatchLog.id)).where(
+            DispatchLog.subscription_id == subscription_id
+        )
+        total_result = await db.execute(total_query)
+        total_dispatches = total_result.scalar() or 0
+
+        # 統計成功派發次數 (狀態為 SUCCESS)
+        success_query = select(func.count(DispatchLog.id)).where(
+            (DispatchLog.subscription_id == subscription_id) &
+            (DispatchLog.status == DispatchLogStatus.SUCCESS)
+        )
+        success_result = await db.execute(success_query)
+        successful_dispatches = success_result.scalar() or 0
+
+        # 計算成功率
+        success_rate = (successful_dispatches / total_dispatches * 100) if total_dispatches > 0 else 0.0
+
+        # 獲取最後活動時間 (最近的派發時間)
+        last_activity_query = select(DispatchLog.dispatched_at).where(
+            DispatchLog.subscription_id == subscription_id
+        ).order_by(DispatchLog.dispatched_at.desc()).limit(1)
+        last_activity_result = await db.execute(last_activity_query)
+        last_activity = last_activity_result.scalar_one_or_none()
+
+        return SubscriptionStats(
+            total_dispatches=total_dispatches,
+            successful_dispatches=successful_dispatches,
+            success_rate=round(success_rate, 2),  # 保留兩位小數
+            last_activity=last_activity,
+        )
 
     # 私有方法
     async def _validate_topic_exists(self, topic_id: str, db: AsyncSession) -> None:

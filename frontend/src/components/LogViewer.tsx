@@ -14,10 +14,11 @@ interface LogViewerProps {
  * 整合篩選器和列表，提供完整的日誌查看功能
  */
 export const LogViewer = ({ displayType = 'unified', className = '' }: LogViewerProps) => {
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<any>({
     skip: 0,
     limit: 20
   })
+  const [searchQuery, setSearchQuery] = useState('')
 
   // 處理篩選條件變更
   const handleFiltersChange = (newFilters: any) => {
@@ -26,16 +27,25 @@ export const LogViewer = ({ displayType = 'unified', className = '' }: LogViewer
 
   // 處理搜尋
   const handleSearch = async (query: string) => {
-    if (query.trim()) {
-      // 如果有搜尋查詢，使用搜尋功能
-      // 這裡可以觸發搜尋邏輯
-      console.log('搜尋:', query)
-    } else {
-      // 如果搜尋查詢為空，恢復正常篩選
+    const trimmedQuery = query.trim()
+    setSearchQuery(trimmedQuery)
+
+    if (trimmedQuery) {
+      // 如果有搜尋查詢，設定搜尋標記
       setFilters(prev => ({
         ...prev,
-        skip: 0
+        skip: 0,
+        search: trimmedQuery
       }))
+    } else {
+      // 如果搜尋查詢為空，清除搜尋標記
+      setFilters(prev => {
+        const { search, ...rest } = prev
+        return {
+          ...rest,
+          skip: 0
+        }
+      })
     }
   }
 
@@ -47,12 +57,13 @@ export const LogViewer = ({ displayType = 'unified', className = '' }: LogViewer
         currentFilters={filters}
         onFiltersChange={handleFiltersChange}
         onSearch={handleSearch}
+        searchQuery={searchQuery}
       />
 
       {/* 日誌列表 */}
       <LogList
         displayType={displayType}
-        initialFilters={filters}
+        filters={filters}
       />
     </div>
   )

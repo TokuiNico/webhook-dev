@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { subscriptionService } from '../services/subscriptionService'
-import type { SubscriptionResponse } from '../types/subscription'
+import { logService } from '../services/logService'
+import type { SubscriptionResponse, SubscriptionStats } from '../types/subscription'
+import type { DispatchLog } from '../types/log'
 
 interface SubscriptionDetailProps {
   /** 自定義 CSS 類名 */
@@ -16,8 +18,61 @@ export const SubscriptionDetail = ({ className = '' }: SubscriptionDetailProps) 
   const navigate = useNavigate()
   const { subscriptionId } = useParams<{ subscriptionId: string }>()
   const [subscription, setSubscription] = useState<SubscriptionResponse | null>(null)
+  const [stats, setStats] = useState<SubscriptionStats | null>(null)
+  const [dispatchLogs, setDispatchLogs] = useState<DispatchLog[]>([])
   const [loading, setLoading] = useState(true)
+  const [statsLoading, setStatsLoading] = useState(false)
+  const [logsLoading, setLogsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // 載入統計數據
+  const loadStats = async () => {
+    if (!subscriptionId) return
+
+    setStatsLoading(true)
+
+    try {
+      const response = await subscriptionService.getSubscriptionStats(subscriptionId)
+
+      if (response.error) {
+        console.warn('載入統計數據失敗:', response.error.message)
+        // 不設置錯誤，因為統計數據是可選的
+      } else if (response.data) {
+        setStats(response.data)
+      }
+    } catch (err) {
+      console.warn('載入統計數據時發生錯誤:', err)
+      // 不設置錯誤，因為統計數據是可選的
+    } finally {
+      setStatsLoading(false)
+    }
+  }
+
+  // 載入交付記錄
+  const loadDispatchLogs = async () => {
+    if (!subscriptionId) return
+
+    setLogsLoading(true)
+
+    try {
+      const response = await logService.getDispatchLogs({
+        subscription_id: subscriptionId,
+        limit: 10, // 只顯示最近10條記錄
+      })
+
+      if (response.error) {
+        console.warn('載入交付記錄失敗:', response.error.message)
+        // 不設置錯誤，因為交付記錄是可選的
+      } else if (response.data) {
+        setDispatchLogs(response.data.items)
+      }
+    } catch (err) {
+      console.warn('載入交付記錄時發生錯誤:', err)
+      // 不設置錯誤，因為交付記錄是可選的
+    } finally {
+      setLogsLoading(false)
+    }
+  }
 
   // 載入訂閱詳情
   const loadSubscription = async () => {
@@ -37,6 +92,8 @@ export const SubscriptionDetail = ({ className = '' }: SubscriptionDetailProps) 
         setError(response.error.message)
       } else if (response.data) {
         setSubscription(response.data)
+        // 載入訂閱詳情成功後，載入統計數據和交付記錄
+        await Promise.all([loadStats(), loadDispatchLogs()])
       }
     } catch (err) {
       setError('載入訂閱詳情失敗')
@@ -253,25 +310,41 @@ export const SubscriptionDetail = ({ className = '' }: SubscriptionDetailProps) 
         {/* 統計數據 */}
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">統計數據</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                0 {/* 這裡應該從 API 獲取實際數據 */}
+          {statsLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-sm text-gray-600">載入統計數據中...</p>
+            </div>
+          ) : stats ? (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {stats.total_dispatches}
+                  </div>
+                  <div className="text-sm text-gray-600">總派發次數</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {stats.success_rate}%
+                  </div>
+                  <div className="text-sm text-gray-600">成功率</div>
+                </div>
               </div>
-              <div className="text-sm text-gray-600">接收事件數</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                100% {/* 這裡應該從 API 獲取實際數據 */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="text-sm text-gray-600">
+                  最後活動：{stats.last_activity ? formatDate(stats.last_activity) : '無'}
+                </div>
               </div>
-              <div className="text-sm text-gray-600">成功率</div>
+            </>
+          ) : (
+            <div className="text-center text-gray-500 py-8">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <p className="mt-2 text-sm">尚未有統計數據</p>
             </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="text-sm text-gray-600">
-              最後活動：無 {/* 這裡應該從 API 獲取實際數據 */}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* 技術詳情 */}
@@ -302,15 +375,52 @@ export const SubscriptionDetail = ({ className = '' }: SubscriptionDetailProps) 
         {/* 最近交付記錄 */}
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">最近交付記錄</h2>
-          <div className="text-center text-gray-500 py-8">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <p className="mt-2 text-sm">尚未有交付記錄</p>
-            <p className="text-xs text-gray-400 mt-1">
-              當有 webhook 事件發送到此訂閱時，這裡將顯示交付歷史
-            </p>
-          </div>
+          {logsLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-sm text-gray-600">載入交付記錄中...</p>
+            </div>
+          ) : dispatchLogs.length > 0 ? (
+            <div className="space-y-3">
+              {dispatchLogs.map((log) => (
+                <div key={log.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      log.status === 'SUCCESS' ? 'bg-green-500' :
+                      log.status === 'FAILED' ? 'bg-red-500' :
+                      log.status === 'TIMEOUT' ? 'bg-yellow-500' :
+                      'bg-gray-500'
+                    }`}></div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {log.status === 'SUCCESS' ? '成功' :
+                         log.status === 'FAILED' ? '失敗' :
+                         log.status === 'TIMEOUT' ? '超時' :
+                         '待處理'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {formatDate(log.dispatched_at)}
+                        {log.response_status_code && ` • HTTP ${log.response_status_code}`}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    嘗試 #{log.attempt}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-gray-500 py-8">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p className="mt-2 text-sm">尚未有交付記錄</p>
+              <p className="text-xs text-gray-400 mt-1">
+                當有 webhook 事件發送到此訂閱時，這裡將顯示交付歷史
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

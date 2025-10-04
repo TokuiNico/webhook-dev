@@ -11,6 +11,7 @@ import type {
   SubscriptionUpdate,
   SubscriptionFilterParams,
   SubscriptionDetailResponse,
+  SubscriptionStats,
   BulkSubscriptionOperation,
   BulkOperationResponse,
   SubscriptionError,
@@ -195,6 +196,35 @@ class SubscriptionService {
 
       return {
         data: undefined,
+        loading: false,
+        error: undefined
+      }
+    } catch (error) {
+      return this.handleApiError(error)
+    }
+  }
+
+  /**
+   * 獲取訂閱統計數據
+   * @param subscriptionId 訂閱 ID
+   */
+  async getSubscriptionStats(subscriptionId: string): Promise<ApiResponse<SubscriptionStats>> {
+    try {
+      const token = authService.getCurrentToken()
+      if (!token) {
+        throw new Error('未登入')
+      }
+
+      const response = await axios.get<SubscriptionStats>(`${this.baseUrl}/${subscriptionId}/stats`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      return {
+        data: response.data,
         loading: false,
         error: undefined
       }

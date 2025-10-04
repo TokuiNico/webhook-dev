@@ -156,10 +156,13 @@ class LogService {
         throw new Error('未登入')
       }
 
+      // 準備API調用的篩選參數（狀態需要在前端篩選，其他可以在後端篩選）
+      const { status, ...apiFilters } = filters || {}
+
       // 並發獲取事件和派發日誌
       const [eventLogsResult, dispatchLogsResult] = await Promise.allSettled([
-        this.getEventLogs(filters),
-        this.getDispatchLogs(filters)
+        this.getEventLogs(apiFilters),
+        this.getDispatchLogs(apiFilters)
       ])
 
       const eventLogs = eventLogsResult.status === 'fulfilled' && eventLogsResult.value.data
@@ -171,7 +174,7 @@ class LogService {
         : []
 
       // 轉換為統一格式
-      const unifiedItems: UnifiedLogItem[] = [
+      let unifiedItems: UnifiedLogItem[] = [
         ...eventLogs.map(event => ({
           id: event.id,
           type: 'event' as const,
@@ -190,6 +193,22 @@ class LogService {
           error_message: dispatch.error_message
         }))
       ]
+
+      // 應用前端篩選（狀態、時間範圍需要在前端進行，因為是跨事件/派發的統一篩選）
+      if (filters?.status && filters.status !== '') {
+        unifiedItems = unifiedItems.filter(item => item.status === filters.status)
+      }
+
+      // 時間範圍篩選
+      if (filters?.date_from) {
+        const fromDate = new Date(filters.date_from)
+        unifiedItems = unifiedItems.filter(item => new Date(item.timestamp) >= fromDate)
+      }
+
+      if (filters?.date_to) {
+        const toDate = new Date(filters.date_to)
+        unifiedItems = unifiedItems.filter(item => new Date(item.timestamp) <= toDate)
+      }
 
       // 按時間戳倒序排序
       unifiedItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
@@ -220,7 +239,7 @@ class LogService {
    */
   async searchLogs(query: string, filters?: EventLogFilterParams & DispatchLogFilterParams): Promise<LogApiResponse<UnifiedLogListResponse>> {
     try {
-      // 先獲取統一日誌
+      // 先獲取統一日誌（已經包含狀態篩選）
       const unifiedResult = await this.getUnifiedLogs(filters)
 
       if (!unifiedResult.data) {

@@ -14,6 +14,7 @@ from app.schemas.subscription import (
     SubscriptionResponse,
     SubscriptionUpdate,
     SubscriptionList,
+    SubscriptionStats,
 )
 
 router = APIRouter(dependencies=[Depends(get_api_key)])
@@ -111,3 +112,29 @@ async def activate_subscription(
 ) -> dict:
     """重新啟用已停用的訂閱"""
     return await subscription_service.activate_subscription(db, subscription_id)
+
+
+@router.get("/{subscription_id}/stats", response_model=SubscriptionStats)
+async def get_subscription_stats(
+    subscription_id: str, db: AsyncSession = Depends(get_authenticated_db)
+) -> SubscriptionStats:
+    """
+    獲取訂閱的統計數據
+
+    **什麼是訂閱統計數據？**
+
+    訂閱統計數據顯示了該訂閱的 webhook 派發情況，包括總派發次數、成功率和最後活動時間。
+    這些數據基於派發日誌計算，可以幫助您監控訂閱的健康狀況。
+
+    **返回的統計數據：**
+    - `total_dispatches`: 總派發次數
+    - `successful_dispatches`: 成功派發次數
+    - `success_rate`: 成功率（百分比，0-100）
+    - `last_activity`: 最後活動時間（最近一次派發的時間）
+
+    **範例場景：**
+    - 監控訂閱的健康狀況
+    - 識別可能有問題的訂閱（成功率過低）
+    - 查看訂閱的活躍程度
+    """
+    return await subscription_service.get_subscription_stats(db, subscription_id)
