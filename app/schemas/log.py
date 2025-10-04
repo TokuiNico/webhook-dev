@@ -3,7 +3,7 @@
 """
 
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 from app.db.models import EventLogStatus, DispatchLogStatus
 
@@ -17,11 +17,19 @@ class EventLogResponse(BaseModel):
     headers: Optional[dict] = None
     content_type: Optional[str] = None
     payload: Optional[str] = None
-    status: EventLogStatus
+    status: str
     received_at: datetime
 
     class Config:
         from_attributes = True
+
+    @field_validator('status', mode='before')
+    @classmethod
+    def status_enum_to_string(cls, v):
+        """將狀態枚舉轉換為字符串"""
+        if isinstance(v, EventLogStatus):
+            return v.name
+        return v
 
 
 class DispatchLogResponse(BaseModel):
@@ -30,13 +38,21 @@ class DispatchLogResponse(BaseModel):
     id: str
     event_log_id: str
     subscription_id: str
-    status: Optional[DispatchLogStatus] = None
+    status: Optional[str] = None
     response_status_code: Optional[int] = None
     response_body: Optional[str] = None
     dispatched_at: datetime
 
     class Config:
         from_attributes = True
+
+    @field_validator('status', mode='before')
+    @classmethod
+    def status_enum_to_string(cls, v):
+        """將狀態枚舉轉換為字符串"""
+        if isinstance(v, DispatchLogStatus):
+            return v.name
+        return v
 
 
 class EventLogListResponse(BaseModel):
