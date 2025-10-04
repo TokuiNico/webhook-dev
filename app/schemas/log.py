@@ -30,7 +30,6 @@ class DispatchLogResponse(BaseModel):
     id: str
     event_log_id: str
     subscription_id: str
-    attempt: int
     status: Optional[DispatchLogStatus] = None
     response_status_code: Optional[int] = None
     response_body: Optional[str] = None

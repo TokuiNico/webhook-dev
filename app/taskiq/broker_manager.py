@@ -3,30 +3,15 @@ TaskIQ Broker Manager - 統一管理 TaskIQ broker 的開發和生產模式
 """
 
 import logging
-from typing import List, Optional
+from typing import Optional
 
 from taskiq.middlewares import SmartRetryMiddleware
-from taskiq import InMemoryBroker, TaskiqMiddleware
+from taskiq import InMemoryBroker
 from taskiq_aio_pika import AioPikaBroker
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
-
-
-class SmartRetryMiddleware(TaskiqMiddleware):
-    """智能重試中間件，處理不同類型的錯誤與重試策略"""
-
-    def __init__(
-        self,
-        max_retries: int = 3,
-        retry_delays: List[int] = [60, 300, 1800],  # 1分鐘, 5分鐘, 30分鐘
-        retry_on_status_codes: List[int] = [500, 502, 503, 504, 408, 429],
-    ):
-        self.max_retries = max_retries
-        self.retry_delays = retry_delays
-        self.retry_on_status_codes = retry_on_status_codes
-        logger.info(f"🔄 SmartRetryMiddleware 已初始化 - 最大重試: {max_retries} 次")
 
 
 class TaskiqBrokerManager:
@@ -42,11 +27,25 @@ class TaskiqBrokerManager:
         if self._broker is None:
             if self._is_development:
                 logger.info("🔧 使用 InMemoryBroker 進行開發測試")
-                self._broker = InMemoryBroker().with_middlewares(SmartRetryMiddleware())
+                self._broker = InMemoryBroker().with_middlewares(
+                    SmartRetryMiddleware(
+                        default_retry_count=3,
+                        default_delay=1,
+                        use_jitter=True,
+                        use_delay_exponent=True,
+                        max_delay_exponent=30,  # 開發環境用較短時間
+                    )
+                )
             else:
                 logger.info("🚀 使用 AioPikaBroker 連接 RabbitMQ")
                 self._broker = AioPikaBroker(settings.RABBITMQ_URL).with_middlewares(
-                    SmartRetryMiddleware()
+                    SmartRetryMiddleware(
+                        default_retry_count=3,
+                        default_delay=60,
+                        use_jitter=True,
+                        use_delay_exponent=True,
+                        max_delay_exponent=1800,  # 最大延遲 30 分鐘
+                    )
                 )
 
         return self._broker

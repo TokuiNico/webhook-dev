@@ -37,7 +37,6 @@ async def send_webhook_to_subscription(
         content_type: 內容類型
         headers: 原始請求頭
         source_ip: 來源 IP
-        attempt: 嘗試次數
 
     Returns:
         Dict[str, Any]: 分發結果
@@ -110,7 +109,7 @@ async def send_webhook_to_subscription(
 
     response_body = response_body or error_message
 
-    # 記錄分發結果到數據庫
+    # 記錄分發結果到數據庫 - 在任務失敗前記錄，避免回滾
     try:
         await log_dispatch_result(
             event_log_id=event_log_id,
@@ -122,7 +121,6 @@ async def send_webhook_to_subscription(
     except Exception as log_error:
         # 如果日誌記錄失敗，不影響主要任務流程
         logger.warning(f"📝 記錄分發結果失敗（但任務繼續）: {log_error}")
-
 
     if status == DispatchLogStatus.FAILED:
         raise RuntimeError(error_message)
@@ -144,15 +142,6 @@ async def log_dispatch_result(
 ) -> None:
     """
     記錄分發結果到數據庫
-
-    Args:
-        event_log_id: 事件記錄 ID
-        subscription_id: 訂閱 ID
-        status: 狀態
-        status_code: HTTP 狀態碼
-        response_body: 響應內容
-        error_message: 錯誤信息
-        dispatched_at: 分發時間
     """
     from app.services.log_service import log_service
     try:
