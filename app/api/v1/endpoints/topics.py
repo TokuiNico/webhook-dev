@@ -3,15 +3,15 @@
 只處理 HTTP 路由和請求/響應，業務邏輯由服務層處理
 """
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from app.api.v1.deps import get_authenticated_db, get_api_key
 from app.services.topic_service import source_service, topic_service
 from app.services.webhook_service import webhook_service
-from app.schemas.topic import TopicCreate, TopicResponse
-from app.schemas.source import SourceCreate, SourceResponse
+from app.schemas.topic import TopicCreate, TopicResponse, TopicUpdate
+from app.schemas.source import SourceCreate, SourceUpdate, SourceResponse
 
 router = APIRouter(dependencies=[Depends(get_api_key)])
 
@@ -60,6 +60,54 @@ async def create_source(
         auth_type=source.auth_type,
         auth_config=source.auth_config,
     )
+
+
+@router.get("/sources/{source_id}", response_model=SourceResponse)
+async def get_source(
+    source_id: str, db: AsyncSession = Depends(get_authenticated_db)
+) -> dict:
+    """
+    獲取特定來源的詳細信息
+    """
+    source = await source_service.get_source_by_id(db, source_id)
+    if source is None:
+        raise HTTPException(status_code=404, detail="來源不存在")
+    return source
+
+
+@router.put("/sources/{source_id}", response_model=SourceResponse)
+async def update_source(
+    source_id: str,
+    source: SourceUpdate,
+    db: AsyncSession = Depends(get_authenticated_db)
+) -> dict:
+    """
+    更新特定來源的信息
+    """
+    updated_source = await source_service.update_source_by_id(
+        db=db,
+        source_id=source_id,
+        name=source.name,
+        secret=source.secret,
+        auth_type=source.auth_type,
+        auth_config=source.auth_config,
+    )
+    if updated_source is None:
+        raise HTTPException(status_code=404, detail="來源不存在")
+    return updated_source
+
+
+@router.delete("/sources/{source_id}")
+async def delete_source(
+    source_id: str, db: AsyncSession = Depends(get_authenticated_db)
+):
+    """
+    刪除特定來源
+    """
+    success = await source_service.delete_source_by_id(db, source_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="來源不存在")
+    return {"message": "來源已刪除"}
 
 
 # Topic endpoints
@@ -130,6 +178,80 @@ async def get_topic(
 ) -> dict:
     """獲取特定主題的詳細信息"""
     return await topic_service.get_topic_by_id(db, topic_id)
+
+
+@router.put("/topics/{topic_id}", response_model=TopicResponse)
+async def update_topic(
+    topic_id: str,
+    topic: TopicUpdate,
+    db: AsyncSession = Depends(get_authenticated_db)
+) -> dict:
+    """
+    更新特定主題的信息
+    """
+    updated_topic = await topic_service.update_topic_by_id(
+        db=db,
+        topic_id=topic_id,
+        name=topic.name,
+        description=topic.description,
+        source_id=topic.source_id,
+    )
+    if updated_topic is None:
+        raise HTTPException(status_code=404, detail="主題不存在")
+    return updated_topic
+
+
+@router.delete("/topics/{topic_id}")
+async def delete_topic(
+    topic_id: str, db: AsyncSession = Depends(get_authenticated_db)
+):
+    """
+    刪除特定主題
+    """
+    success, message = await topic_service.delete_topic_by_id(db, topic_id)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    return {"message": message}
+
+
+@router.get("/topics/{topic_id}/webhooks")
+async def get_topic_webhooks(
+    topic_id: str,
+    skip: int = 0,
+    limit: int = 10,
+    db: AsyncSession = Depends(get_authenticated_db)
+) -> Dict[str, Any]:
+    """
+    獲取特定主題的 webhook 列表
+
+    **參數：**
+    - `skip`: 跳過的記錄數（分頁用）
+    - `limit`: 返回的最大記錄數
+
+    **返回：**
+    - webhook 列表及總數
+    """
+    return await topic_service.get_topic_webhooks(db, topic_id, skip, limit)
+
+
+@router.get("/topics/{topic_id}/subscribers")
+async def get_topic_subscribers(
+    topic_id: str,
+    skip: int = 0,
+    limit: int = 10,
+    db: AsyncSession = Depends(get_authenticated_db)
+) -> Dict[str, Any]:
+    """
+    獲取訂閱特定主題的訂閱者列表
+
+    **參數：**
+    - `skip`: 跳過的記錄數（分頁用）
+    - `limit`: 返回的最大記錄數
+
+    **返回：**
+    - 訂閱者列表及總數
+    """
+    return await topic_service.get_topic_subscribers(db, topic_id, skip, limit)
 
 
 # Authentication validators info endpoint

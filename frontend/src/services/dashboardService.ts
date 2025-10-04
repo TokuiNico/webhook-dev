@@ -11,11 +11,11 @@ import type {
   ApiResponse,
   DashboardError
 } from '../types/dashboard'
-import { authService } from './authService';
-import { env } from '../config/env';
+import { authService } from './authService'
+import { env } from '../config/env'
 
 class DashboardService {
-  private readonly baseUrl = `${env.API_BASE_URL}/stats`
+  private readonly baseUrl = env.API_BASE_URL + '/stats'
 
   /**
    * 獲取系統總覽統計數據
@@ -133,7 +133,10 @@ class DashboardService {
       // HTTP 錯誤
       if (error.response) {
         errorCode = error.response.status.toString()
-        if (error.response.data?.detail) {
+        // 優先檢查 message 字段（後端統一錯誤格式）
+        if (error.response.data?.message) {
+          errorMessage = error.response.data.message
+        } else if (error.response.data?.detail) {
           errorMessage = error.response.data.detail
         } else if (error.response.status === 401) {
           errorMessage = '認證失敗，請重新登入'
@@ -151,7 +154,7 @@ class DashboardService {
     } else if (error?.response) {
       // 非 axios 錯誤但有響應屬性（測試用）
       errorCode = error.response.status.toString()
-      errorMessage = error.response.data?.detail || 'Unauthorized'
+      errorMessage = error.response.data?.message || error.response.data?.detail || '未知錯誤'
     } else if (error instanceof Error) {
       // 其他錯誤
       errorMessage = error.message

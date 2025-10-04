@@ -30,8 +30,8 @@ vi.mock('react-router-dom', async () => {
 // Mock window.confirm and alert
 const mockConfirm = vi.fn()
 const mockAlert = vi.fn()
-global.confirm = mockConfirm
-global.alert = mockAlert
+Object.defineProperty(window, 'confirm', { value: mockConfirm, writable: true })
+Object.defineProperty(window, 'alert', { value: mockAlert, writable: true })
 
 describe('SubscriptionList', () => {
   const mockSubscriptions: SubscriptionResponse[] = [

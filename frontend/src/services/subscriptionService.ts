@@ -20,6 +20,7 @@ import { authService } from './authService'
 import { env } from '../config/env'
 
 class SubscriptionService {
+  private readonly baseUrl = env.API_BASE_URL + '/subscriptions'
 
   /**
    * 獲取訂閱列表
@@ -37,7 +38,7 @@ class SubscriptionService {
         throw new Error('未登入')
       }
 
-      const response = await axios.get<SubscriptionListResponse>(`${env.API_BASE_URL}/subscriptions`, {
+      const response = await axios.get<SubscriptionListResponse>(`${this.baseUrl}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -67,7 +68,7 @@ class SubscriptionService {
         throw new Error('未登入')
       }
 
-      const response = await axios.get<SubscriptionResponse>(`${env.API_BASE_URL}/subscriptions/${subscriptionId}`, {
+      const response = await axios.get<SubscriptionResponse>(`${this.baseUrl}/${subscriptionId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -96,7 +97,7 @@ class SubscriptionService {
         throw new Error('未登入')
       }
 
-      const response = await axios.get<SubscriptionDetailResponse>(`${env.API_BASE_URL}/subscriptions/${subscriptionId}/detail`, {
+      const response = await axios.get<SubscriptionDetailResponse>(`${this.baseUrl}/${subscriptionId}/detail`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -125,7 +126,7 @@ class SubscriptionService {
         throw new Error('未登入')
       }
 
-      const response = await axios.post<SubscriptionResponse>(`${env.API_BASE_URL}/subscriptions`, subscriptionData, {
+      const response = await axios.post<SubscriptionResponse>(`${this.baseUrl}`, subscriptionData, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -155,7 +156,7 @@ class SubscriptionService {
         throw new Error('未登入')
       }
 
-      const response = await axios.put<SubscriptionResponse>(`${env.API_BASE_URL}/subscriptions/${subscriptionId}`, updateData, {
+      const response = await axios.put<SubscriptionResponse>(`${this.baseUrl}/${subscriptionId}`, updateData, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -184,7 +185,7 @@ class SubscriptionService {
         throw new Error('未登入')
       }
 
-      await axios.delete(`${env.API_BASE_URL}/subscriptions/${subscriptionId}`, {
+      await axios.delete(`${this.baseUrl}/${subscriptionId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -213,7 +214,7 @@ class SubscriptionService {
         throw new Error('未登入')
       }
 
-      await axios.post(`${env.API_BASE_URL}/subscriptions/${subscriptionId}/activate`, {}, {
+      await axios.post(`${this.baseUrl}/${subscriptionId}/activate`, {}, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -244,7 +245,7 @@ class SubscriptionService {
 
       const endpoint = operation.operation === 'activate' ? 'bulk-activate' : 'bulk-deactivate'
 
-      const response = await axios.post<BulkOperationResponse>(`${env.API_BASE_URL}/subscriptions/${endpoint}`, {
+      const response = await axios.post<BulkOperationResponse>(`${this.baseUrl}/${endpoint}`, {
         subscription_ids: operation.subscription_ids
       }, {
         method: 'POST',
@@ -277,7 +278,10 @@ class SubscriptionService {
       if (error.response) {
         errorCode = error.response.status.toString()
 
-        if (error.response.data?.detail) {
+        // 優先檢查 message 字段（後端統一錯誤格式）
+        if (error.response.data?.message) {
+          errorMessage = error.response.data.message
+        } else if (error.response.data?.detail) {
           // 處理單個錯誤訊息
           if (typeof error.response.data.detail === 'string') {
             errorMessage = error.response.data.detail
@@ -308,7 +312,7 @@ class SubscriptionService {
     } else if (error?.response) {
       // 非 axios 錯誤但有響應屬性（測試用）
       errorCode = error.response.status.toString()
-      errorMessage = error.response.data?.detail || '未知錯誤'
+      errorMessage = error.response.data?.message || error.response.data?.detail || '未知錯誤'
     } else if (error instanceof Error) {
       // 其他錯誤
       errorMessage = error.message

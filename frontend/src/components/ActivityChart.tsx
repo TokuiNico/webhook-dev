@@ -236,7 +236,7 @@ export const ActivityChart = ({
             <p className="text-lg font-medium">圖表元件預留區域</p>
             <p className="text-sm mt-1">此處將整合 Chart.js 或 D3.js 圖表庫</p>
             <p className="text-xs mt-2 text-gray-400">
-              當前數據: {activityStats.daily_trend.length} 個數據點
+              當前數據: {activityStats.daily_trend?.length || 0} 個數據點
             </p>
           </div>
         </div>
@@ -247,7 +247,7 @@ export const ActivityChart = ({
         <div className="bg-blue-50 p-4 rounded-lg">
           <h3 className="text-sm font-medium text-blue-900 mb-2">總活動量</h3>
           <p className="text-2xl font-bold text-blue-600">
-            {activityStats.daily_trend.reduce((sum, day) => sum + day.total, 0).toLocaleString()}
+            {(activityStats.daily_trend || []).reduce((sum, day) => sum + (day.total || 0), 0).toLocaleString()}
           </p>
           <p className="text-xs text-blue-700 mt-1">
             期間內總 webhook 數量
@@ -257,8 +257,8 @@ export const ActivityChart = ({
         <div className="bg-green-50 p-4 rounded-lg">
           <h3 className="text-sm font-medium text-green-900 mb-2">平均成功率</h3>
           <p className="text-2xl font-bold text-green-600">
-            {activityStats.daily_trend.length > 0
-              ? (activityStats.daily_trend.reduce((sum, day) => sum + (day.success / Math.max(day.total, 1)), 0) / activityStats.daily_trend.length * 100).toFixed(1)
+            {(activityStats.daily_trend || []).length > 0
+              ? ((activityStats.daily_trend || []).reduce((sum, day) => sum + ((day.success || 0) / Math.max(day.total || 1, 1)), 0) / (activityStats.daily_trend || []).length * 100).toFixed(1)
               : 0
             }%
           </p>
@@ -270,8 +270,8 @@ export const ActivityChart = ({
         <div className="bg-red-50 p-4 rounded-lg">
           <h3 className="text-sm font-medium text-red-900 mb-2">平均失敗率</h3>
           <p className="text-2xl font-bold text-red-600">
-            {activityStats.daily_trend.length > 0
-              ? (activityStats.daily_trend.reduce((sum, day) => sum + (day.failed / Math.max(day.total, 1)), 0) / activityStats.daily_trend.length * 100).toFixed(1)
+            {(activityStats.daily_trend || []).length > 0
+              ? ((activityStats.daily_trend || []).reduce((sum, day) => sum + ((day.failed || 0) / Math.max(day.total || 1, 1)), 0) / (activityStats.daily_trend || []).length * 100).toFixed(1)
               : 0
             }%
           </p>

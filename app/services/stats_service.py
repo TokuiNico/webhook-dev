@@ -6,9 +6,9 @@
 from typing import Dict, Any, List
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, case
 
-from app.db.models import EventLog, DispatchLog, Subscription, Topic, Source
+from app.db.models import EventLog, DispatchLog, DispatchLogStatus, Subscription, Topic, Source
 
 
 class StatsService:
@@ -57,20 +57,25 @@ class StatsService:
         Returns:
             Dict[str, Any]: 活動統計數據
         """
-        end_date = datetime.utcnow()
-        start_date = end_date - timedelta(days=days)
+        try:
+            end_date = datetime.utcnow()
+            start_date = end_date - timedelta(days=days)
 
-        # 獲取每日統計
-        daily_activity = await self._get_daily_activity(db, start_date)
+            # 獲取每日統計
+            daily_trend = await self._get_daily_trend(db, start_date)
 
-        # 獲取今日每小時統計
-        hourly_activity = await self._get_hourly_activity(db, end_date)
+            # 獲取今日每小時統計
+            hourly_distribution = await self._get_hourly_distribution(db, end_date)
 
-        return {
-            "daily_activity": daily_activity,
-            "hourly_activity": hourly_activity,
-            "period_days": days,
-        }
+            return {
+                "daily_trend": daily_trend,
+                "hourly_distribution": hourly_distribution,
+            }
+        except Exception as e:
+            print(f"Error in get_activity_stats: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
 
     async def get_source_stats(self, db: AsyncSession) -> Dict[str, Any]:
         """
@@ -105,6 +110,45 @@ class StatsService:
         ]
 
         return {"source_statistics": source_stats}
+
+    async def get_topic_stats(self, topic_id: str, db: AsyncSession) -> Dict[str, Any]:
+        """
+        獲取特定主題的統計數據
+
+        Args:
+            topic_id: 主題 ID
+            db: 數據庫會話
+
+        Returns:
+            Dict[str, Any]: 主題統計數據
+        """
+        # 獲取 webhook 數量 (event_logs 數量)
+        webhook_count_result = await db.execute(
+            select(func.count(EventLog.id)).where(EventLog.topic_id == topic_id)
+        )
+        webhook_count = webhook_count_result.scalar() or 0
+
+        # 獲取訂閱者數量 (subscriptions 數量)
+        subscriber_count_result = await db.execute(
+            select(func.count(Subscription.id)).where(Subscription.topic_id == topic_id)
+        )
+        subscriber_count = subscriber_count_result.scalar() or 0
+
+        # 獲取最後活動時間 (最新 event_log 的 received_at)
+        last_activity_result = await db.execute(
+            select(EventLog.received_at)
+            .where(EventLog.topic_id == topic_id)
+            .order_by(EventLog.received_at.desc())
+            .limit(1)
+        )
+        last_activity_row = last_activity_result.first()
+        last_activity = last_activity_row.received_at.isoformat() if last_activity_row else None
+
+        return {
+            "webhook_count": webhook_count,
+            "subscriber_count": subscriber_count,
+            "last_activity": last_activity,
+        }
 
     # 私有方法
     async def _execute_parallel_queries(
@@ -204,46 +248,112 @@ class StatsService:
             for event, topic, source in recent_events_result.all()
         ]
 
-    async def _get_daily_activity(
+    async def _get_daily_trend(
         self, db: AsyncSession, start_date: datetime
     ) -> List[Dict[str, Any]]:
-        """獲取每日活動統計"""
+        """獲取每日趨勢統計"""
 
-        daily_counts_result = await db.execute(
+        # 獲取每日總數 (來自 EventLog)
+        daily_total_result = await db.execute(
             select(
                 func.date(EventLog.received_at).label("date"),
-                func.count(EventLog.id).label("count"),
+                func.count(EventLog.id).label("total"),
             )
             .where(EventLog.received_at >= start_date)
             .group_by(func.date(EventLog.received_at))
-            .order_by(func.date(EventLog.received_at))
         )
 
-        return [
-            {"date": str(row.date), "webhooks": row.count}
-            for row in daily_counts_result.all()
-        ]
+        # 獲取每日成功數和失敗數 (來自 DispatchLog)
+        daily_dispatch_result = await db.execute(
+            select(
+                func.date(EventLog.received_at).label("date"),
+                func.sum(case((DispatchLog.status == DispatchLogStatus.SUCCESS, 1), else_=0)).label("success"),
+                func.sum(case((DispatchLog.status == DispatchLogStatus.FAILED, 1), else_=0)).label("failed"),
+            )
+            .select_from(DispatchLog)
+            .join(EventLog, DispatchLog.event_log_id == EventLog.id)
+            .where(EventLog.received_at >= start_date)
+            .group_by(func.date(EventLog.received_at))
+        )
 
-    async def _get_hourly_activity(
+        # 合併數據
+        total_dict = {str(row.date): row.total for row in daily_total_result.all()}
+        dispatch_dict = {str(row.date): {"success": row.success or 0, "failed": row.failed or 0}
+                        for row in daily_dispatch_result.all()}
+
+        # 組合結果
+        all_dates = set(total_dict.keys()) | set(dispatch_dict.keys())
+
+        # 如果沒有資料，至少返回今天和昨天的資料結構
+        if not all_dates:
+            end_date = datetime.utcnow()
+            for i in range(7):  # 過去7天
+                date_str = (end_date - timedelta(days=i)).strftime('%Y-%m-%d')
+                all_dates.add(date_str)
+
+        result = []
+        for date in sorted(all_dates, reverse=True):  # 最新的日期在前
+            result.append({
+                "date": date,
+                "total": int(total_dict.get(date, 0)),
+                "success": int(dispatch_dict.get(date, {}).get("success", 0)),
+                "failed": int(dispatch_dict.get(date, {}).get("failed", 0))
+            })
+
+        return result
+
+    async def _get_hourly_distribution(
         self, db: AsyncSession, end_date: datetime
     ) -> List[Dict[str, Any]]:
-        """獲取今日每小時活動統計"""
+        """獲取今日每小時分布統計"""
 
         today_start = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        hourly_counts_result = await db.execute(
+
+        # 獲取每小時總數 (來自 EventLog)
+        hourly_total_result = await db.execute(
             select(
                 func.extract("hour", EventLog.received_at).label("hour"),
-                func.count(EventLog.id).label("count"),
+                func.count(EventLog.id).label("total"),
             )
             .where(EventLog.received_at >= today_start)
             .group_by(func.extract("hour", EventLog.received_at))
-            .order_by(func.extract("hour", EventLog.received_at))
         )
 
-        return [
-            {"hour": int(row.hour), "webhooks": row.count}
-            for row in hourly_counts_result.all()
-        ]
+        # 獲取每小時成功數和失敗數 (來自 DispatchLog)
+        hourly_dispatch_result = await db.execute(
+            select(
+                func.extract("hour", EventLog.received_at).label("hour"),
+                func.sum(case((DispatchLog.status == DispatchLogStatus.SUCCESS, 1), else_=0)).label("success"),
+                func.sum(case((DispatchLog.status == DispatchLogStatus.FAILED, 1), else_=0)).label("failed"),
+            )
+            .select_from(DispatchLog)
+            .join(EventLog, DispatchLog.event_log_id == EventLog.id)
+            .where(EventLog.received_at >= today_start)
+            .group_by(func.extract("hour", EventLog.received_at))
+        )
+
+        # 合併數據
+        total_dict = {int(row.hour): row.total for row in hourly_total_result.all()}
+        dispatch_dict = {int(row.hour): {"success": row.success or 0, "failed": row.failed or 0}
+                        for row in hourly_dispatch_result.all()}
+
+        # 組合結果
+        all_hours = set(total_dict.keys()) | set(dispatch_dict.keys())
+
+        # 如果沒有資料，至少返回所有小時的資料結構 (0-23)
+        if not all_hours:
+            all_hours = set(range(24))
+
+        result = []
+        for hour in sorted(all_hours):
+            result.append({
+                "hour": hour,
+                "total": int(total_dict.get(hour, 0)),
+                "success": int(dispatch_dict.get(hour, {}).get("success", 0)),
+                "failed": int(dispatch_dict.get(hour, {}).get("failed", 0))
+            })
+
+        return result
 
     def _determine_system_status(self, stats: Dict[str, Any]) -> str:
         """根據統計數據確定系統狀態"""

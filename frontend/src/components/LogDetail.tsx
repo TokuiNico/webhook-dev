@@ -209,38 +209,46 @@ export const LogDetail = ({ logType, className = '' }: LogDetailProps) => {
                 </>
               ) : (
                 <>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">事件日誌 ID</dt>
-                    <dd className="mt-1 text-sm font-mono text-gray-900 bg-gray-50 p-2 rounded">
-                      {dispatchLog.event_log_id}
-                    </dd>
-                  </div>
+                  {dispatchLog && (
+                    <>
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">事件日誌 ID</dt>
+                        <dd className="mt-1 text-sm font-mono text-gray-900 bg-gray-50 p-2 rounded">
+                          {dispatchLog.event_log_id}
+                        </dd>
+                      </div>
 
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">訂閱 ID</dt>
-                    <dd className="mt-1 text-sm font-mono text-gray-900 bg-gray-50 p-2 rounded">
-                      {dispatchLog.subscription_id}
-                    </dd>
-                  </div>
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">訂閱 ID</dt>
+                        <dd className="mt-1 text-sm font-mono text-gray-900 bg-gray-50 p-2 rounded">
+                          {dispatchLog.subscription_id}
+                        </dd>
+                      </div>
+                    </>
+                  )}
 
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">嘗試次數</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{dispatchLog.attempt}</dd>
-                  </div>
+                  {dispatchLog && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">嘗試次數</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{dispatchLog.attempt}</dd>
+                    </div>
+                  )}
 
-                  {dispatchLog.response_status_code && (
+                  {dispatchLog && dispatchLog.response_status_code && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">響應狀態碼</dt>
                       <dd className="mt-1 text-sm text-gray-900">{dispatchLog.response_status_code}</dd>
                     </div>
                   )}
 
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">派發時間</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{formatTimestamp(dispatchLog.dispatched_at)}</dd>
-                  </div>
+                  {dispatchLog && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">派發時間</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{formatTimestamp(dispatchLog.dispatched_at)}</dd>
+                    </div>
+                  )}
 
-                  {dispatchLog.completed_at && (
+                  {dispatchLog && dispatchLog.completed_at && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">完成時間</dt>
                       <dd className="mt-1 text-sm text-gray-900">{formatTimestamp(dispatchLog.completed_at)}</dd>

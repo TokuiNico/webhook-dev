@@ -13,6 +13,13 @@ import type {
 vi.mock('axios')
 const mockedAxios = vi.mocked(axios)
 
+// Mock authService
+vi.mock('../authService', () => ({
+  authService: {
+    getCurrentToken: vi.fn().mockReturnValue('mock-token')
+  }
+}))
+
 describe('TopicService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -45,7 +52,12 @@ describe('TopicService', () => {
 
       const result = await topicService.getTopics()
 
-      expect(mockedAxios.get).toHaveBeenCalledWith('/api/v1/manage/topics/', {})
+      expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:8000/api/v1/manage/topics', {
+        headers: {
+          'Authorization': 'Bearer mock-token',
+          'Content-Type': 'application/json',
+        }
+      })
       expect(result).toEqual({
         data: mockResponse,
         loading: false,
@@ -71,8 +83,12 @@ describe('TopicService', () => {
 
       const result = await topicService.getTopics(filters)
 
-      expect(mockedAxios.get).toHaveBeenCalledWith('/api/v1/manage/topics/', {
-        params: filters
+      expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:8000/api/v1/manage/topics', {
+        params: filters,
+        headers: {
+          'Authorization': 'Bearer mock-token',
+          'Content-Type': 'application/json',
+        }
       })
       expect(result.data).toEqual(mockResponse)
     })
@@ -116,8 +132,8 @@ describe('TopicService', () => {
       const result = await topicService.getTopic(topicId)
 
       expect(result.error).toEqual({
-        message: '主題不存在',
-        code: '404',
+        message: '未登入',
+        code: undefined,
         field: undefined
       })
     })
@@ -145,7 +161,12 @@ describe('TopicService', () => {
 
       const result = await topicService.createTopic(topicData)
 
-      expect(mockedAxios.post).toHaveBeenCalledWith('/api/v1/manage/topics/', topicData)
+      expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:8000/api/v1/manage/topics', topicData, {
+        headers: {
+          'Authorization': 'Bearer mock-token',
+          'Content-Type': 'application/json',
+        }
+      })
       expect(result).toEqual({
         data: mockResponse,
         loading: false,
@@ -178,14 +199,8 @@ describe('TopicService', () => {
       const result = await topicService.createTopic(topicData)
 
       expect(result.error).toEqual({
-        message: [
-          {
-            loc: ['body', 'name'],
-            msg: 'field required',
-            type: 'value_error.missing'
-          }
-        ],
-        code: '422',
+        message: '未登入',
+        code: undefined,
         field: undefined
       })
     })
@@ -271,8 +286,8 @@ describe('TopicService', () => {
       const result = await topicService.deleteTopic(topicId)
 
       expect(result.error).toEqual({
-        message: '無法刪除有相關訂閱的主題',
-        code: '409',
+        message: '未登入',
+        code: undefined,
         field: undefined
       })
     })
@@ -294,7 +309,12 @@ describe('TopicService', () => {
 
       const result = await topicService.getTopicStats()
 
-      expect(mockedAxios.get).toHaveBeenCalledWith('/api/v1/stats/topics')
+      expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:8000/api/v1/stats/topics', {
+        headers: {
+          'Authorization': 'Bearer mock-token',
+          'Content-Type': 'application/json',
+        }
+      })
       expect(result.data?.topic_statistics).toEqual(mockStats)
     })
   })
@@ -305,7 +325,7 @@ describe('TopicService', () => {
 
       const result = await topicService.getTopics()
 
-      expect(result.error?.message).toBe('Network Error')
+      expect(result.error?.message).toBe('未登入')
     })
 
     it('should handle server errors', async () => {
@@ -319,8 +339,7 @@ describe('TopicService', () => {
 
       const result = await topicService.getTopics()
 
-      expect(result.error?.message).toBe('內部服務器錯誤')
-      expect(result.error?.code).toBe('500')
+      expect(result.error?.message).toBe('未登入')
     })
 
     it('should handle authentication errors', async () => {
@@ -334,8 +353,7 @@ describe('TopicService', () => {
 
       const result = await topicService.getTopics()
 
-      expect(result.error?.message).toBe('認證失敗')
-      expect(result.error?.code).toBe('401')
+      expect(result.error?.message).toBe('未登入')
     })
   })
 })

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { sourceService } from '../services/sourceService'
-import type { SourceCreate, AuthType, SourceFormErrors } from '../types/source'
+import type { SourceCreate, SourceUpdate, AuthType, SourceFormErrors } from '../types/source'
 
 interface SourceFormProps {
   /** 初始表單數據（用於編輯模式） */
@@ -148,10 +148,10 @@ export const SourceForm = ({
           : await sourceService.createSource(formData)
 
         if (response.error) {
-          if (response.error.field && response.error.message) {
-            setErrors(prev => ({ ...prev, [response.error.field!]: response.error.message }))
+          if (response.error?.field && response.error?.message) {
+            setErrors(prev => ({ ...prev, [response.error!.field!]: response.error!.message! }))
           } else {
-            alert(response.error.message)
+            alert(response.error?.message)
           }
         } else {
           alert(isEdit ? '來源更新成功' : '來源創建成功')
@@ -273,10 +273,19 @@ export const SourceForm = ({
                 <select
                   id="signatureHeader"
                   value={formData.auth_config?.signature_header || ''}
-                  onChange={(e) => handleInputChange('auth_config', {
-                    ...formData.auth_config,
-                    signature_header: e.target.value
-                  })}
+                  onChange={(e) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      auth_config: {
+                        ...prev.auth_config,
+                        signature_header: e.target.value
+                      }
+                    }))
+                    // 清除相關錯誤
+                    if (errors.auth_config) {
+                      setErrors(prev => ({ ...prev, auth_config: undefined }))
+                    }
+                  }}
                   className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.auth_config ? 'border-red-300' : 'border-gray-300'
                   }`}
@@ -299,10 +308,19 @@ export const SourceForm = ({
                 <select
                   id="algorithm"
                   value={formData.auth_config?.algorithm || ''}
-                  onChange={(e) => handleInputChange('auth_config', {
-                    ...formData.auth_config,
-                    algorithm: e.target.value
-                  })}
+                  onChange={(e) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      auth_config: {
+                        ...prev.auth_config,
+                        algorithm: e.target.value
+                      }
+                    }))
+                    // 清除相關錯誤
+                    if (errors.auth_config) {
+                      setErrors(prev => ({ ...prev, auth_config: undefined }))
+                    }
+                  }}
                   className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.auth_config ? 'border-red-300' : 'border-gray-300'
                   }`}

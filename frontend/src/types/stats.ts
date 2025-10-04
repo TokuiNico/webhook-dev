@@ -45,18 +45,15 @@ export interface HourlyStats {
 
 // 來源統計數據
 export interface SourceStats {
-  sources: SourceStatItem[]
-  total_sources: number
+  source_statistics: SourceStatItem[]
+  total_sources?: number
 }
 
 // 來源統計項目
 export interface SourceStatItem {
-  source_id: string
-  source_name: string
-  total_webhooks: number
-  total_topics: number
-  success_rate: number
-  last_activity: string
+  source: string
+  webhook_count: number
+  topic_count: number
 }
 
 // 統計服務錯誤

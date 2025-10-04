@@ -5,11 +5,11 @@
 
 // 從環境變數讀取設定，如果沒有則使用預設值
 export const env = {
-  // API 設定
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1',
+  // API 設定 - 開發時直接連接到後端
+  API_BASE_URL: import.meta.env.DEV ? 'http://localhost:8000/api/v1' : '/api/v1',
 
   // 認證設定
-  DEFAULT_API_KEY: import.meta.env.VITE_DEFAULT_API_KEY || 'your-api-key',
+  DEFAULT_API_KEY: import.meta.env.VITE_DEFAULT_API_KEY || 'hello',
 
   // 開發模式設定
   IS_DEVELOPMENT: import.meta.env.DEV || false,

@@ -19,7 +19,7 @@ import { authService } from './authService'
 import { env } from '../config/env'
 
 class StatsService {
-  private readonly baseUrl = `${env.API_BASE_URL}/stats`
+  private readonly baseUrl = env.API_BASE_URL + '/stats'
 
   /**
    * 獲取系統總覽統計數據
@@ -88,6 +88,33 @@ class StatsService {
       }
 
       const response = await axios.get<SourceStats>(`${this.baseUrl}/sources`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      return {
+        data: response.data,
+        loading: false,
+        error: undefined
+      }
+    } catch (error) {
+      return this.handleApiError(error)
+    }
+  }
+
+  /**
+   * 獲取主題統計數據
+   */
+  async getTopicStats(topicId: string): Promise<StatsApiResponse<any>> {
+    try {
+      const token = authService.getCurrentToken()
+      if (!token) {
+        throw new Error('未登入')
+      }
+
+      const response = await axios.get<any>(`${this.baseUrl}/topics/${topicId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -276,7 +303,10 @@ class StatsService {
     if (axios.isAxiosError(error)) {
       if (error.response) {
         errorCode = error.response.status.toString()
-        if (error.response.data?.detail) {
+        // 優先檢查 message 字段（後端統一錯誤格式）
+        if (error.response.data?.message) {
+          errorMessage = error.response.data.message
+        } else if (error.response.data?.detail) {
           errorMessage = error.response.data.detail
         } else if (error.response.status === 401) {
           errorMessage = '認證失敗，請重新登入'

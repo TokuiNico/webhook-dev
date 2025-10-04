@@ -18,13 +18,13 @@ import { authService } from './authService';
 import { env } from '../config/env';
 
 class SourceService {
-  private readonly baseUrl = '/api/v1/manage/sources/'
+  private readonly baseUrl = env.API_BASE_URL + '/manage/sources'
 
   /**
    * 獲取來源列表
    * @param filters 篩選參數
    */
-  async getSources(filters?: SourceFilterParams): Promise<ApiResponse<SourceListResponse>> {
+  async getSources(filters?: SourceFilterParams): Promise<ApiResponse<SourceResponse[] | SourceListResponse>> {
     try {
       const config: any = {}
       if (filters && Object.keys(filters).length > 0) {
@@ -36,7 +36,7 @@ class SourceService {
         throw new Error('未登入');
       }
 
-      const response = await axios.get<SourceListResponse>(`${env.API_BASE_URL}/sources`, {
+      const response = await axios.get<SourceListResponse>(`${this.baseUrl}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -60,7 +60,17 @@ class SourceService {
    */
   async getSource(sourceId: string): Promise<ApiResponse<SourceResponse>> {
     try {
-      const response = await axios.get<SourceResponse>(`${this.baseUrl}${sourceId}`)
+      const token = authService.getCurrentToken();
+      if (!token) {
+        throw new Error('未登入');
+      }
+
+      const response = await axios.get<SourceResponse>(`${this.baseUrl}/${sourceId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
 
       return {
         data: response.data,
@@ -83,7 +93,7 @@ class SourceService {
         throw new Error('未登入');
       }
 
-      const response = await axios.post<SourceResponse>(`${env.API_BASE_URL}/sources`, sourceData, {
+      const response = await axios.post<SourceResponse>(`${this.baseUrl}`, sourceData, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -113,7 +123,7 @@ class SourceService {
         throw new Error('未登入');
       }
 
-      const response = await axios.put<SourceResponse>(`${this.baseUrl}${sourceId}`, updateData, {
+      const response = await axios.put<SourceResponse>(`${this.baseUrl}/${sourceId}`, updateData, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -142,7 +152,7 @@ class SourceService {
         throw new Error('未登入');
       }
 
-      await axios.delete(`${this.baseUrl}${sourceId}`, {
+      await axios.delete(`${this.baseUrl}/${sourceId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -165,7 +175,8 @@ class SourceService {
    */
   async getSourceStats(): Promise<ApiResponse<{ source_statistics: SourceStats[] }>> {
     try {
-      const response = await axios.get<{ source_statistics: SourceStats[] }>('/api/v1/stats/sources')
+      const statsUrl = env.API_BASE_URL + '/stats/sources'
+      const response = await axios.get<{ source_statistics: SourceStats[] }>(statsUrl)
 
       return {
         data: response.data,
@@ -240,7 +251,10 @@ class SourceService {
       if (error.response) {
         errorCode = error.response.status.toString()
 
-        if (error.response.data?.detail) {
+        // 優先檢查 message 字段（後端統一錯誤格式）
+        if (error.response.data?.message) {
+          errorMessage = error.response.data.message
+        } else if (error.response.data?.detail) {
           // 處理單個錯誤訊息
           if (typeof error.response.data.detail === 'string') {
             errorMessage = error.response.data.detail
@@ -271,7 +285,7 @@ class SourceService {
     } else if (error?.response) {
       // 非 axios 錯誤但有響應屬性（測試用）
       errorCode = error.response.status.toString()
-      errorMessage = error.response.data?.detail || '未知錯誤'
+      errorMessage = error.response.data?.message || error.response.data?.detail || '未知錯誤'
     } else if (error instanceof Error) {
       // 其他錯誤
       errorMessage = error.message

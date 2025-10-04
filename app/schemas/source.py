@@ -15,6 +15,13 @@ class SourceCreate(SourceBase):
     pass
 
 
+class SourceUpdate(BaseModel):
+    name: Optional[str] = None
+    secret: Optional[str] = None
+    auth_type: Optional[Literal["signature", "none"]] = None
+    auth_config: Optional[Dict[str, Any]] = None
+
+
 class SourceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
 import { authService, AuthCredentials, AuthResult } from '../services/authService'
 
 interface AuthContextType {
@@ -19,19 +19,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // 初始化時檢查現有的認證狀態
   useEffect(() => {
-    const initAuth = () => {
+    const initAuth = async () => {
       const token = authService.getCurrentToken()
       const authenticated = authService.isAuthenticated()
 
       setCurrentToken(token)
       setIsAuthenticated(authenticated)
       setIsLoading(false)
+
+      // 如果已認證且需要刷新，進行刷新
+      if (authenticated && authService.shouldRefreshToken()) {
+        try {
+          await authService.refreshToken()
+          const newToken = authService.getCurrentToken()
+          setCurrentToken(newToken)
+        } catch (error) {
+          console.error('初始化時刷新令牌失敗:', error)
+        }
+      }
+
+      // 開發環境自動登入
+      if (!authenticated && import.meta.env.DEV) {
+        try {
+          console.log('開發環境自動登入中...')
+          const result = await authService.authenticate({ apiKey: 'hello' })
+          if (result.success) {
+            setCurrentToken(result.token)
+            setIsAuthenticated(true)
+            console.log('開發環境自動登入成功')
+          } else {
+            console.log('開發環境自動登入失敗:', result.error)
+          }
+        } catch (error) {
+          console.log('開發環境自動登入出錯:', error)
+        }
+      }
     }
 
     initAuth()
   }, [])
 
-  const login = async (credentials: AuthCredentials): Promise<AuthResult> => {
+  const login = useCallback(async (credentials: AuthCredentials): Promise<AuthResult> => {
     setIsLoading(true)
 
     try {
@@ -51,15 +79,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         error: '登入過程中發生錯誤'
       }
     }
-  }
+  }, [])
 
-  const logout = () => {
+  const logout = useCallback(() => {
     authService.logout()
     setIsAuthenticated(false)
     setCurrentToken(null)
-  }
+  }, [])
 
-  const refreshToken = async () => {
+  const refreshToken = useCallback(async () => {
     try {
       const result = await authService.refreshToken()
 
@@ -73,16 +101,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('令牌刷新失敗:', error)
       logout()
     }
-  }
+  }, [logout])
 
-  const value: AuthContextType = {
+  const value = useMemo<AuthContextType>(() => ({
     isAuthenticated,
     isLoading,
     login,
     logout,
     refreshToken,
     currentToken
-  }
+  }), [isAuthenticated, isLoading, login, logout, refreshToken, currentToken])
 
   return (
     <AuthContext.Provider value={value}>

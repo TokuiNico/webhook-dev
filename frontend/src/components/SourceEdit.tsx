@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { sourceService } from '../services/sourceService'
 import { SourceForm } from './SourceForm'
+import { useAuth } from '../hooks/useAuth'
 import type { SourceResponse, SourceUpdate } from '../types/source'
 
 /**
@@ -11,9 +12,18 @@ import type { SourceResponse, SourceUpdate } from '../types/source'
 export const SourceEdit = () => {
   const navigate = useNavigate()
   const { sourceId } = useParams<{ sourceId: string }>()
+  const { isAuthenticated } = useAuth()
   const [source, setSource] = useState<SourceResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // 檢查登入狀態
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login', { replace: true })
+      return
+    }
+  }, [isAuthenticated, navigate])
 
   // 載入來源資料
   const loadSource = async () => {
@@ -43,8 +53,10 @@ export const SourceEdit = () => {
 
   // 初始化載入
   useEffect(() => {
-    loadSource()
-  }, [sourceId])
+    if (isAuthenticated) {
+      loadSource()
+    }
+  }, [sourceId, isAuthenticated])
 
   // 處理編輯提交
   const handleEdit = async (updateData: SourceUpdate) => {

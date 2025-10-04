@@ -8,10 +8,14 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
+    // 開發時允許跨來源請求，避免 CORS 問題
+    cors: true,
+    // 代理 API 請求到後端服務
     proxy: {
-      '/api': {
+      '/api/v1': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+        secure: false,
       },
     },
   },

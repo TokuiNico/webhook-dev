@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"  # 用於開發時的 result backend
 
     # Security settings
-    API_KEY: str = "your-api-key"
+    API_KEY: str = "hello"
 
     # Server settings
     DOMAIN: str = "http://localhost:8000"  # 用於生成 ingest_url，預設為本地開發

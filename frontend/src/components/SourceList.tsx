@@ -37,12 +37,24 @@ export const SourceList = ({ className = '' }: SourceListProps) => {
 
       if (response.error) {
         setError(response.error.message)
+        setSources([]) // 確保在錯誤時也設置為空數組
       } else if (response.data) {
-        setSources(response.data.items)
-        setTotal(response.data.total)
+        // 檢查 response.data 是否為陣列（直接來源列表）或包含 items 屬性的物件
+        if (Array.isArray(response.data)) {
+          setSources(response.data)
+          setTotal(response.data.length)
+        } else if (response.data.items) {
+          setSources(response.data.items)
+          setTotal(response.data.total || 0)
+        } else {
+          setSources([]) // 確保即使數據結構不正確也設置為空數組
+        }
+      } else {
+        setSources([]) // 確保即使數據結構不正確也設置為空數組
       }
     } catch (err) {
       setError('載入來源列表失敗')
+      setSources([]) // 確保在異常時也設置為空數組
     } finally {
       setLoading(false)
     }
@@ -102,30 +114,6 @@ export const SourceList = ({ className = '' }: SourceListProps) => {
     }
   }
 
-  // 處理批量刪除
-  const handleBulkDelete = async (selectedIds: string[]) => {
-    if (selectedIds.length === 0) {
-      alert('請選擇要刪除的來源')
-      return
-    }
-
-    if (!confirm(`確定要刪除選中的 ${selectedIds.length} 個來源嗎？此操作無法復原。`)) {
-      return
-    }
-
-    try {
-      const response = await sourceService.deleteSources(selectedIds)
-
-      if (response.error) {
-        alert(`批量刪除失敗：${response.error.message}`)
-      } else {
-        alert(`成功刪除 ${selectedIds.length} 個來源`)
-        loadSources() // 重新載入列表
-      }
-    } catch (err) {
-      alert('批量刪除時發生錯誤')
-    }
-  }
 
   // 載入狀態
   if (loading) {
@@ -227,7 +215,7 @@ export const SourceList = ({ className = '' }: SourceListProps) => {
 
       {/* 來源列表 */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        {sources.length === 0 ? (
+        {(!sources || sources.length === 0) ? (
           /* 空狀態 */
           <div className="p-8 text-center">
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

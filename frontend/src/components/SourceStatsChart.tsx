@@ -61,27 +61,28 @@ export const SourceStatsChart = ({
 
   // 排序來源數據
   const getSortedSources = () => {
-    if (!sourceStats) return []
+    if (!sourceStats || !sourceStats.source_statistics) return []
 
-    return [...sourceStats.sources].sort((a, b) => {
+    return [...sourceStats.source_statistics].sort((a, b) => {
       let aValue: any, bValue: any
 
       switch (currentSort.by) {
         case 'webhooks':
-          aValue = a.total_webhooks
-          bValue = b.total_webhooks
+          aValue = a.webhook_count
+          bValue = b.webhook_count
           break
         case 'topics':
-          aValue = a.total_topics
-          bValue = b.total_topics
+          aValue = a.topic_count
+          bValue = b.topic_count
           break
         case 'success_rate':
-          aValue = a.success_rate
-          bValue = b.success_rate
+          // 由於後端沒有返回 success_rate，我們使用 webhook_count 作為備用
+          aValue = a.webhook_count
+          bValue = b.webhook_count
           break
         case 'name':
-          aValue = a.source_name
-          bValue = b.source_name
+          aValue = a.source
+          bValue = b.source
           break
         default:
           return 0
@@ -102,11 +103,11 @@ export const SourceStatsChart = ({
 
   // 匯出數據
   const handleExport = (format: 'csv' | 'json') => {
-    if (!sourceStats) return
+    if (!sourceStats || !sourceStats.source_statistics) return
 
     try {
       const dataToExport = format === 'csv'
-        ? convertToCSV(sourceStats.sources)
+        ? convertToCSV(sourceStats.source_statistics)
         : JSON.stringify(sourceStats, null, 2)
 
       const blob = new Blob([dataToExport], {
@@ -258,7 +259,7 @@ export const SourceStatsChart = ({
             <p className="text-lg font-medium text-gray-900">圓餅圖 / 長條圖預留區域</p>
             <p className="text-sm text-gray-600 mt-1">顯示各來源的 webhook 數量分佈</p>
             <p className="text-xs mt-2 text-gray-400">
-              數據來源: {sortedSources.length} 個來源
+              數據來源: {sourceStats.source_statistics.length} 個來源
             </p>
           </div>
         </div>
@@ -313,24 +314,23 @@ export const SourceStatsChart = ({
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {sortedSources.map((source, index) => (
-                <tr key={`${source.source_id}-${index}`} className="hover:bg-gray-50">
+                <tr key={`${source.source}-${index}`} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{source.source_name}</div>
-                    <div className="text-xs text-gray-500 font-mono">{source.source_id}</div>
+                    <div className="text-sm font-medium text-gray-900">{source.source}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{formatNumber(source.total_webhooks)}</div>
+                    <div className="text-sm text-gray-900">{formatNumber(source.webhook_count)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{source.total_topics}</div>
+                    <div className="text-sm text-gray-900">{source.topic_count}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSuccessRateColor(source.success_rate)}`}>
-                      {(source.success_rate * 100).toFixed(1)}%
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSuccessRateColor(0)}`}>
+                      N/A
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(source.last_activity).toLocaleDateString('zh-TW')}
+                    N/A
                   </td>
                 </tr>
               ))}
@@ -343,24 +343,24 @@ export const SourceStatsChart = ({
       <div className="mt-6 pt-4 border-t border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
           <div>
-            <p className="text-2xl font-bold text-gray-900">{sourceStats.total_sources}</p>
+            <p className="text-2xl font-bold text-gray-900">{sourceStats.source_statistics.length}</p>
             <p className="text-sm text-gray-600">總來源數</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900">
-              {sourceStats.sources.reduce((sum, s) => sum + s.total_webhooks, 0).toLocaleString()}
+              {sourceStats.source_statistics.reduce((sum, s) => sum + s.webhook_count, 0).toLocaleString()}
             </p>
             <p className="text-sm text-gray-600">總 Webhook 數</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900">
-              {sourceStats.sources.reduce((sum, s) => sum + s.total_topics, 0)}
+              {sourceStats.source_statistics.reduce((sum, s) => sum + s.topic_count, 0)}
             </p>
             <p className="text-sm text-gray-600">總主題數</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900">
-              {(sourceStats.sources.reduce((sum, s) => sum + s.success_rate, 0) / Math.max(sourceStats.sources.length, 1) * 100).toFixed(1)}%
+              N/A
             </p>
             <p className="text-sm text-gray-600">平均成功率</p>
           </div>

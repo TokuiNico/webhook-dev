@@ -26,7 +26,7 @@ export const TopicList = ({ className = '' }: TopicListProps) => {
   })
 
   // 按來源分組的主題
-  const groupedTopics = topics.reduce((groups, topic) => {
+  const groupedTopics = (topics || []).reduce((groups, topic) => {
     const sourceId = topic.source_id
     if (!groups[sourceId]) {
       groups[sourceId] = []
@@ -45,12 +45,24 @@ export const TopicList = ({ className = '' }: TopicListProps) => {
 
       if (response.error) {
         setError(response.error.message)
+        setTopics([]) // 確保在錯誤時也設置為空數組
       } else if (response.data) {
-        setTopics(response.data.items)
-        setTotal(response.data.total)
+        // 檢查 response.data 是否為陣列（直接主題列表）或包含 items 屬性的物件
+        if (Array.isArray(response.data)) {
+          setTopics(response.data)
+          setTotal(response.data.length)
+        } else if (response.data.items) {
+          setTopics(response.data.items)
+          setTotal(response.data.total || 0)
+        } else {
+          setTopics([]) // 確保即使數據結構不正確也設置為空數組
+        }
+      } else {
+        setTopics([]) // 確保即使數據結構不正確也設置為空數組
       }
     } catch (err) {
       setError('載入主題列表失敗')
+      setTopics([]) // 確保在異常時也設置為空數組
     } finally {
       setLoading(false)
     }
@@ -130,7 +142,7 @@ export const TopicList = ({ className = '' }: TopicListProps) => {
         </div>
       </div>
 
-      {topics.length === 0 ? (
+      {(!topics || topics.length === 0) ? (
         /* 空狀態 */
         <div className="bg-white shadow rounded-lg p-8 text-center">
           <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -209,11 +221,11 @@ export const TopicList = ({ className = '' }: TopicListProps) => {
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-gray-500">Webhook 數量:</span>
-                            <span className="font-medium text-blue-600">{topic.webhook_count || 0}</span>
+                            <span className="font-medium text-blue-600">-</span>
                           </div>
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-gray-500">訂閱數量:</span>
-                            <span className="font-medium text-green-600">{topic.subscription_count || 0}</span>
+                            <span className="font-medium text-green-600">-</span>
                           </div>
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-gray-500">Ingest URL:</span>

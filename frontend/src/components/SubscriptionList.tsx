@@ -37,12 +37,16 @@ export const SubscriptionList = ({ className = '' }: SubscriptionListProps) => {
 
       if (response.error) {
         setError(response.error.message)
-      } else if (response.data) {
+        setSubscriptions([]) // 確保在錯誤時也設置為空數組
+      } else if (response.data && response.data.items) {
         setSubscriptions(response.data.items)
-        setTotal(response.data.total)
+        setTotal(response.data.total || 0)
+      } else {
+        setSubscriptions([]) // 確保即使數據結構不正確也設置為空數組
       }
     } catch (err) {
       setError('載入訂閱列表失敗')
+      setSubscriptions([]) // 確保在異常時也設置為空數組
     } finally {
       setLoading(false)
     }
@@ -113,7 +117,7 @@ export const SubscriptionList = ({ className = '' }: SubscriptionListProps) => {
   }
 
   // 處理啟用訂閱
-  const handleActivateSubscription = async (subscriptionId: string, subscriberName: string) => {
+  const handleActivateSubscription = async (subscriptionId: string, _subscriberName: string) => {
     try {
       const response = await subscriptionService.activateSubscription(subscriptionId)
 
@@ -243,7 +247,7 @@ export const SubscriptionList = ({ className = '' }: SubscriptionListProps) => {
 
       {/* 訂閱列表 */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        {subscriptions.length === 0 ? (
+        {(!subscriptions || subscriptions.length === 0) ? (
           /* 空狀態 */
           <div className="p-8 text-center">
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

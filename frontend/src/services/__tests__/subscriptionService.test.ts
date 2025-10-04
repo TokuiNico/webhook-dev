@@ -71,7 +71,7 @@ describe('SubscriptionService', () => {
       expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:8000/api/v1/subscriptions', {
         method: 'GET',
         headers: {
-          'Authorization': 'Bearer undefined',
+          'Authorization': 'Bearer mock-token',
           'Content-Type': 'application/json',
         },
         params: undefined
@@ -115,7 +115,7 @@ describe('SubscriptionService', () => {
       expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:8000/api/v1/subscriptions', {
         method: 'GET',
         headers: {
-          'Authorization': 'Bearer undefined',
+          'Authorization': 'Bearer mock-token',
           'Content-Type': 'application/json',
         },
         params: filters
@@ -132,7 +132,7 @@ describe('SubscriptionService', () => {
         data: undefined,
         loading: false,
         error: {
-          message: '載入訂閱列表失敗',
+          message: '未登入',
           code: undefined,
           field: undefined
         }
@@ -164,7 +164,7 @@ describe('SubscriptionService', () => {
       expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:8000/api/v1/subscriptions/01ARZ3NDEKTSV4RRFFQ69G5FAV', {
         method: 'GET',
         headers: {
-          'Authorization': 'Bearer undefined',
+          'Authorization': 'Bearer mock-token',
           'Content-Type': 'application/json',
         },
       })
@@ -202,7 +202,7 @@ describe('SubscriptionService', () => {
       expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:8000/api/v1/subscriptions', subscriptionData, {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer undefined',
+          'Authorization': 'Bearer mock-token',
           'Content-Type': 'application/json',
         },
       })
@@ -238,7 +238,7 @@ describe('SubscriptionService', () => {
       expect(mockedAxios.put).toHaveBeenCalledWith('http://localhost:8000/api/v1/subscriptions/01ARZ3NDEKTSV4RRFFQ69G5FAV', updateData, {
         method: 'PUT',
         headers: {
-          'Authorization': 'Bearer undefined',
+          'Authorization': 'Bearer mock-token',
           'Content-Type': 'application/json',
         },
       })
@@ -259,7 +259,7 @@ describe('SubscriptionService', () => {
       expect(mockedAxios.delete).toHaveBeenCalledWith('http://localhost:8000/api/v1/subscriptions/01ARZ3NDEKTSV4RRFFQ69G5FAV', {
         method: 'DELETE',
         headers: {
-          'Authorization': 'Bearer undefined',
+          'Authorization': 'Bearer mock-token',
           'Content-Type': 'application/json',
         },
       })
@@ -280,7 +280,7 @@ describe('SubscriptionService', () => {
       expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:8000/api/v1/subscriptions/01ARZ3NDEKTSV4RRFFQ69G5FAV/activate', {}, {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer undefined',
+          'Authorization': 'Bearer mock-token',
           'Content-Type': 'application/json',
         },
       })
@@ -323,7 +323,7 @@ describe('SubscriptionService', () => {
       }, {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer undefined',
+          'Authorization': 'Bearer mock-token',
           'Content-Type': 'application/json',
         },
       })
@@ -360,7 +360,7 @@ describe('SubscriptionService', () => {
       }, {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer undefined',
+          'Authorization': 'Bearer mock-token',
           'Content-Type': 'application/json',
         },
       })

@@ -58,10 +58,20 @@ export const SubscriptionForm = ({
       try {
         const response = await topicService.getTopics()
         if (response.data) {
-          setTopics(response.data.items)
+          // API 返回可能是數組或帶有 items 屬性的對象
+          if (Array.isArray(response.data)) {
+            setTopics(response.data)
+          } else if (response.data.items && Array.isArray(response.data.items)) {
+            setTopics(response.data.items)
+          } else {
+            setTopics([])
+          }
+        } else {
+          setTopics([])
         }
       } catch (err) {
         console.error('載入主題列表失敗:', err)
+        setTopics([])
       } finally {
         setTopicsLoading(false)
       }
@@ -139,10 +149,10 @@ export const SubscriptionForm = ({
           : await subscriptionService.createSubscription(formData)
 
         if (response.error) {
-          if (response.error.field && response.error.message) {
-            setErrors(prev => ({ ...prev, [response.error.field!]: response.error.message }))
+          if (response.error?.field && response.error?.message) {
+            setErrors(prev => ({ ...prev, [response.error!.field!]: response.error!.message! }))
           } else {
-            alert(response.error.message || '操作失敗')
+            alert(response.error?.message || '操作失敗')
           }
         } else {
           alert(isEdit ? '訂閱更新成功' : '訂閱創建成功')

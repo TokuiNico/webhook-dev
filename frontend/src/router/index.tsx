@@ -6,6 +6,14 @@ import { SubscriptionList } from '../components/SubscriptionList'
 import { SubscriptionDetail } from '../components/SubscriptionDetail'
 import { SubscriptionForm } from '../components/SubscriptionForm'
 import { SubscriptionEdit } from '../components/SubscriptionEdit'
+import { TopicList } from '../components/TopicList'
+import { TopicForm } from '../components/TopicForm'
+import { TopicDetail } from '../components/TopicDetail'
+import { TopicEdit } from '../components/TopicEdit'
+import { SourceList } from '../components/SourceList'
+import { SourceForm } from '../components/SourceForm'
+import { SourceDetail } from '../components/SourceDetail'
+import { SourceEdit } from '../components/SourceEdit'
 import { StatsOverviewChart } from '../components/StatsOverviewChart'
 import { ActivityChart } from '../components/ActivityChart'
 import { SourceStatsChart } from '../components/SourceStatsChart'
@@ -93,21 +101,35 @@ const AppRouter = () => {
                 />
                 <Route
                   path="/sources"
-                  element={
-                    <div>
-                      <h1 className="text-2xl font-bold text-gray-900">來源管理</h1>
-                      <p className="mt-2 text-sm text-gray-600">管理 webhook 來源和驗證設定</p>
-                    </div>
-                  }
+                  element={<SourceList />}
+                />
+                <Route
+                  path="/sources/create"
+                  element={<SourceForm />}
+                />
+                <Route
+                  path="/sources/:sourceId"
+                  element={<SourceDetail />}
+                />
+                <Route
+                  path="/sources/:sourceId/edit"
+                  element={<SourceEdit />}
                 />
                 <Route
                   path="/topics"
-                  element={
-                    <div>
-                      <h1 className="text-2xl font-bold text-gray-900">主題管理</h1>
-                      <p className="mt-2 text-sm text-gray-600">組織和管理主題</p>
-                    </div>
-                  }
+                  element={<TopicList />}
+                />
+                <Route
+                  path="/topics/create"
+                  element={<TopicForm />}
+                />
+                <Route
+                  path="/topics/:topicId"
+                  element={<TopicDetail />}
+                />
+                <Route
+                  path="/topics/:topicId/edit"
+                  element={<TopicEdit />}
                 />
                 <Route
                   path="/subscriptions"

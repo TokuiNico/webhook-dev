@@ -231,21 +231,21 @@ export const SourceDetail = ({ className = '' }: SourceDetailProps) => {
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {source.webhook_count || 0}
+                -
               </div>
               <div className="text-sm text-gray-600">Webhook 數量</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {source.topic_count || 0}
+                -
               </div>
               <div className="text-sm text-gray-600">主題數量</div>
             </div>
           </div>
-          {source.last_activity && (
+          {source.created_at && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="text-sm text-gray-600">
-                最後活動：{formatDate(source.last_activity)}
+                創建時間：{formatDate(source.created_at)}
               </div>
             </div>
           )}

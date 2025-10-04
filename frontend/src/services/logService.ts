@@ -11,7 +11,6 @@ import type {
   DispatchLogListResponse,
   EventLogFilterParams,
   DispatchLogFilterParams,
-  LogSearchParams,
   UnifiedLogItem,
   UnifiedLogListResponse,
   LogApiResponse
@@ -20,7 +19,7 @@ import { authService } from './authService'
 import { env } from '../config/env'
 
 class LogService {
-  private readonly baseUrl = `${env.API_BASE_URL}/logs`
+  private readonly baseUrl = env.API_BASE_URL + '/logs'
 
   /**
    * 獲取事件日誌列表
@@ -267,7 +266,10 @@ class LogService {
     if (axios.isAxiosError(error)) {
       if (error.response) {
         errorCode = error.response.status.toString()
-        if (error.response.data?.detail) {
+        // 優先檢查 message 字段（後端統一錯誤格式）
+        if (error.response.data?.message) {
+          errorMessage = error.response.data.message
+        } else if (error.response.data?.detail) {
           errorMessage = error.response.data.detail
         } else if (error.response.status === 401) {
           errorMessage = '認證失敗，請重新登入'

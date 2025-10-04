@@ -17,7 +17,7 @@ Object.defineProperty(window, 'localStorage', {
 vi.mock('../secureStorage', () => ({
   secureStorage: {
     setSecureItem: vi.fn(),
-    getSecureItem: vi.fn().mockReturnValue(null), // Default to null
+    getSecureItem: vi.fn(),
     removeItem: vi.fn(),
     clearSecureStorage: vi.fn()
   }
@@ -84,8 +84,8 @@ describe('AuthService', () => {
       const mockToken = 'test-token-123'
       const expiryTime = Date.now() + 3600000 // 1小時後過期
 
-      secureStorage.getSecureItem.mockReturnValue(mockToken)
-      localStorage.getItem.mockReturnValue(expiryTime.toString())
+      vi.mocked(secureStorage.getSecureItem).mockReturnValue(mockToken)
+      vi.mocked(localStorageMock.getItem).mockReturnValue(expiryTime.toString())
 
       const isAuth = authService.isAuthenticated()
       expect(isAuth).toBe(true)
@@ -94,7 +94,7 @@ describe('AuthService', () => {
     it('應該在沒有令牌時返回 false', () => {
       // 清除所有模擬資料
       secureStorage.getSecureItem.mockReturnValue(null)
-      localStorage.getItem.mockReturnValue(null)
+      vi.mocked(localStorageMock.getItem).mockReturnValue(null)
 
       const isAuth = authService.isAuthenticated()
       expect(isAuth).toBe(false)
@@ -105,8 +105,8 @@ describe('AuthService', () => {
       const mockToken = 'expired-token-123'
       const expiryTime = Date.now() - 3600000 // 1小時前過期
 
-      secureStorage.getSecureItem.mockReturnValue(mockToken)
-      localStorage.getItem.mockReturnValue(expiryTime.toString())
+      vi.mocked(secureStorage.getSecureItem).mockReturnValue(mockToken)
+      vi.mocked(localStorageMock.getItem).mockReturnValue(expiryTime.toString())
 
       const isAuth = authService.isAuthenticated()
       expect(isAuth).toBe(false)
@@ -116,7 +116,7 @@ describe('AuthService', () => {
   describe('getCurrentToken', () => {
     it('應該返回當前儲存的令牌', () => {
       const mockToken = 'test-token-123'
-      secureStorage.getSecureItem.mockReturnValue(mockToken)
+      vi.mocked(secureStorage.getSecureItem).mockReturnValue(mockToken)
 
       const token = authService.getCurrentToken()
       expect(token).toBe(mockToken)
@@ -134,8 +134,8 @@ describe('AuthService', () => {
   describe('logout', () => {
     it('應該清除所有認證相關資料', () => {
       // 設定一些測試資料
-      secureStorage.getSecureItem.mockReturnValue('test-token')
-      localStorage.getItem.mockReturnValue('1234567890')
+      vi.mocked(secureStorage.getSecureItem).mockReturnValue('test-token')
+      vi.mocked(localStorageMock.getItem).mockReturnValue('1234567890')
 
       authService.logout()
 
@@ -151,8 +151,8 @@ describe('AuthService', () => {
       const mockToken = 'test-token-123'
       const expiryTime = Date.now() + (5 * 60 * 1000) // 5分鐘後過期
 
-      secureStorage.getSecureItem.mockReturnValue(mockToken)
-      localStorage.getItem.mockReturnValue(expiryTime.toString())
+      vi.mocked(secureStorage.getSecureItem).mockReturnValue(mockToken)
+      vi.mocked(localStorageMock.getItem).mockReturnValue(expiryTime.toString())
 
       const shouldRefresh = authService.shouldRefreshToken()
       expect(shouldRefresh).toBe(true)
@@ -163,8 +163,8 @@ describe('AuthService', () => {
       const mockToken = 'test-token-123'
       const expiryTime = Date.now() + (2 * 60 * 60 * 1000) // 2小時後過期
 
-      secureStorage.getSecureItem.mockReturnValue(mockToken)
-      localStorage.getItem.mockReturnValue(expiryTime.toString())
+      vi.mocked(secureStorage.getSecureItem).mockReturnValue(mockToken)
+      vi.mocked(localStorageMock.getItem).mockReturnValue(expiryTime.toString())
 
       const shouldRefresh = authService.shouldRefreshToken()
       expect(shouldRefresh).toBe(false)
@@ -173,7 +173,7 @@ describe('AuthService', () => {
     it('應該在沒有令牌時返回 false', () => {
       // 清除所有模擬資料
       secureStorage.getSecureItem.mockReturnValue(null)
-      localStorage.getItem.mockReturnValue(null)
+      vi.mocked(localStorageMock.getItem).mockReturnValue(null)
 
       const shouldRefresh = authService.shouldRefreshToken()
       expect(shouldRefresh).toBe(false)

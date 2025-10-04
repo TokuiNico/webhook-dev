@@ -7,6 +7,13 @@ import type { SystemOverview, ActivityStats, SourceStats } from '../../types/das
 vi.mock('axios')
 const mockedAxios = vi.mocked(axios)
 
+// Mock authService
+vi.mock('../authService', () => ({
+  authService: {
+    getCurrentToken: vi.fn().mockReturnValue('mock-token')
+  }
+}))
+
 describe('DashboardService', () => {
   beforeEach(() => {
     vi.clearAllMocks()

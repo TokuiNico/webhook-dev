@@ -50,7 +50,12 @@ describe('SourceService', () => {
 
       const result = await sourceService.getSources()
 
-      expect(mockedAxios.get).toHaveBeenCalledWith('/api/v1/manage/sources/', {})
+      expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:8000/api/v1/manage/sources', {
+        headers: {
+          'Authorization': 'Bearer mock-token',
+          'Content-Type': 'application/json',
+        }
+      })
       expect(result).toEqual({
         data: mockResponse,
         loading: false,
@@ -77,8 +82,12 @@ describe('SourceService', () => {
 
       const result = await sourceService.getSources(filters)
 
-      expect(mockedAxios.get).toHaveBeenCalledWith('/api/v1/manage/sources/', {
-        params: filters
+      expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:8000/api/v1/manage/sources', {
+        params: filters,
+        headers: {
+          'Authorization': 'Bearer mock-token',
+          'Content-Type': 'application/json',
+        }
       })
       expect(result.data).toEqual(mockResponse)
     })
@@ -161,7 +170,12 @@ describe('SourceService', () => {
 
       const result = await sourceService.createSource(sourceData)
 
-      expect(mockedAxios.post).toHaveBeenCalledWith('/api/v1/manage/sources/', sourceData)
+      expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:8000/api/v1/manage/sources', sourceData, {
+        headers: {
+          'Authorization': 'Bearer mock-token',
+          'Content-Type': 'application/json',
+        }
+      })
       expect(result).toEqual({
         data: mockResponse,
         loading: false,
@@ -313,7 +327,12 @@ describe('SourceService', () => {
 
       const result = await sourceService.getSourceStats()
 
-      expect(mockedAxios.get).toHaveBeenCalledWith('/api/v1/stats/sources')
+      expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:8000/api/v1/stats/sources', {
+        headers: {
+          'Authorization': 'Bearer mock-token',
+          'Content-Type': 'application/json',
+        }
+      })
       expect(result.data?.source_statistics).toEqual(mockStats)
     })
   })

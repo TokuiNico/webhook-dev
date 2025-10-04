@@ -18,30 +18,30 @@ import { authService } from './authService';
 import { env } from '../config/env';
 
 class TopicService {
-  private readonly baseUrl = '/api/v1/manage/topics/'
+  private readonly baseUrl = env.API_BASE_URL + '/manage/topics'
 
   /**
    * 獲取主題列表
    * @param filters 篩選參數
    */
-  async getTopics(filters?: TopicFilterParams): Promise<ApiResponse<TopicListResponse>> {
+  async getTopics(filters?: TopicFilterParams): Promise<ApiResponse<TopicResponse[] | TopicListResponse>> {
     try {
       const token = authService.getCurrentToken();
       if (!token) {
         throw new Error('未登入');
       }
 
-      const config: any = {}
-      if (filters && Object.keys(filters).length > 0) {
-        config.params = filters
-      }
-
-      const response = await axios.get<TopicListResponse>(`${env.API_BASE_URL}/topics`, {
+      const config: any = {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-      })
+      }
+      if (filters && Object.keys(filters).length > 0) {
+        config.params = filters
+      }
+
+      const response = await axios.get<TopicListResponse>(this.baseUrl, config)
 
       return {
         data: response.data,
@@ -64,7 +64,7 @@ class TopicService {
         throw new Error('未登入');
       }
 
-      const response = await axios.get<TopicResponse>(`${this.baseUrl}${topicId}`, {
+      const response = await axios.get<TopicResponse>(`${this.baseUrl}/${topicId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -121,7 +121,7 @@ class TopicService {
         throw new Error('未登入');
       }
 
-      const response = await axios.put<TopicResponse>(`${this.baseUrl}${topicId}`, updateData, {
+      const response = await axios.put<TopicResponse>(`${this.baseUrl}/${topicId}`, updateData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -149,7 +149,7 @@ class TopicService {
         throw new Error('未登入');
       }
 
-      await axios.delete(`${this.baseUrl}${topicId}`, {
+      await axios.delete(`${this.baseUrl}/${topicId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -253,6 +253,62 @@ class TopicService {
   }
 
   /**
+   * 獲取主題的 webhook 列表
+   */
+  async getTopicWebhooks(topicId: string, params?: { skip?: number; limit?: number }): Promise<ApiResponse<any>> {
+    try {
+      const token = authService.getCurrentToken();
+      if (!token) {
+        throw new Error('未登入');
+      }
+
+      const response = await axios.get<any>(`${this.baseUrl}/${topicId}/webhooks`, {
+        params,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      return {
+        data: response.data,
+        loading: false,
+        error: undefined
+      }
+    } catch (error) {
+      return this.handleApiError(error)
+    }
+  }
+
+  /**
+   * 獲取主題的訂閱者列表
+   */
+  async getTopicSubscribers(topicId: string, params?: { skip?: number; limit?: number }): Promise<ApiResponse<any>> {
+    try {
+      const token = authService.getCurrentToken();
+      if (!token) {
+        throw new Error('未登入');
+      }
+
+      const response = await axios.get<any>(`${this.baseUrl}/${topicId}/subscribers`, {
+        params,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      return {
+        data: response.data,
+        loading: false,
+        error: undefined
+      }
+    } catch (error) {
+      return this.handleApiError(error)
+    }
+  }
+
+  /**
    * 處理 API 錯誤，統一錯誤格式
    */
   private handleApiError(error: any): ApiResponse<any> {
@@ -265,7 +321,10 @@ class TopicService {
       if (error.response) {
         errorCode = error.response.status.toString()
 
-        if (error.response.data?.detail) {
+        // 優先檢查 message 字段（後端統一錯誤格式）
+        if (error.response.data?.message) {
+          errorMessage = error.response.data.message
+        } else if (error.response.data?.detail) {
           // 處理單個錯誤訊息
           if (typeof error.response.data.detail === 'string') {
             errorMessage = error.response.data.detail
@@ -296,7 +355,7 @@ class TopicService {
     } else if (error?.response) {
       // 非 axios 錯誤但有響應屬性（測試用）
       errorCode = error.response.status.toString()
-      errorMessage = error.response.data?.detail || '未知錯誤'
+      errorMessage = error.response.data?.message || error.response.data?.detail || '未知錯誤'
     } else if (error instanceof Error) {
       // 其他錯誤
       errorMessage = error.message

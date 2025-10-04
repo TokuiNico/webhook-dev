@@ -66,3 +66,20 @@ async def get_source_stats(
     **用途：** 瞭解哪些外部服務使用最頻繁
     """
     return await stats_service.get_source_stats(db)
+
+
+@router.get("/topics/{topic_id}")
+async def get_topic_stats(
+    topic_id: str, db: AsyncSession = Depends(get_authenticated_db)
+) -> Dict[str, Any]:
+    """
+    獲取特定主題的統計數據
+
+    **包含數據：**
+    - 主題的 webhook 數量
+    - 主題的訂閱者數量
+    - 主題的最後活動時間
+
+    **用途：** 顯示主題的詳細統計信息
+    """
+    return await stats_service.get_topic_stats(topic_id, db)

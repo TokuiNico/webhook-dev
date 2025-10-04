@@ -52,13 +52,17 @@ export const LogList = ({
 
       if (response.error) {
         setError(response.error.message)
-      } else if (response.data) {
+        setLogs([]) // 確保在錯誤時也設置為空數組
+      } else if (response.data && response.data.items) {
         setLogs(response.data.items)
-        setTotal(response.data.total)
+        setTotal(response.data.total || 0)
         setLastUpdate(new Date())
+      } else {
+        setLogs([]) // 確保即使數據結構不正確也設置為空數組
       }
     } catch (err) {
       setError('載入日誌失敗')
+      setLogs([]) // 確保在異常時也設置為空數組
     } finally {
       setLoading(false)
     }
@@ -99,7 +103,7 @@ export const LogList = ({
   }
 
   // 載入狀態
-  if (loading && logs.length === 0) {
+  if (loading && (!logs || logs.length === 0)) {
     return (
       <div className={`bg-white shadow rounded-lg p-6 ${className}`}>
         <div className="animate-pulse">
@@ -115,7 +119,7 @@ export const LogList = ({
   }
 
   // 錯誤狀態
-  if (error && logs.length === 0) {
+  if (error && (!logs || logs.length === 0)) {
     return (
       <div className={`bg-white shadow rounded-lg p-6 ${className}`}>
         <div className="text-center py-8">
@@ -154,7 +158,7 @@ export const LogList = ({
 
       {/* 日誌列表 */}
       <div className="divide-y divide-gray-200">
-        {logs.length === 0 ? (
+        {(!logs || logs.length === 0) ? (
           <div className="p-8 text-center">
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

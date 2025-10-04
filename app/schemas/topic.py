@@ -15,6 +15,7 @@ class TopicCreate(TopicBase):
 class TopicUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    source_id: Optional[str] = None
 
 
 class TopicResponse(TopicBase):

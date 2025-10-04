@@ -1,5 +1,4 @@
 import React, { Component, ReactNode, ErrorInfo } from 'react'
-import { useAuth } from '../hooks/useAuth'
 
 interface AppContainerProps {
   children?: ReactNode
@@ -21,7 +20,7 @@ class AppContainerClass extends Component<AppContainerProps, AppContainerState> 
 
     this.state = {
       hasError: false,
-      isLoading: true
+      isLoading: false
     }
   }
 
@@ -38,11 +37,6 @@ class AppContainerClass extends Component<AppContainerProps, AppContainerState> 
 
     // 在生產環境中，這裡可以發送錯誤報告到監控服務
     // reportError(error, errorInfo)
-  }
-
-  componentDidMount() {
-    // 模擬應用程式初始化
-    this.setState({ isLoading: false })
   }
 
   handleRetry = () => {
@@ -142,16 +136,9 @@ const LoadingSpinner: React.FC = () => (
 )
 
 /**
- * 應用程式容器 Hook 包裝器
- * 提供認證狀態整合
+ * 應用程式容器元件
+ * 提供頂層狀態管理和錯誤處理
  */
 export const AppContainer: React.FC<AppContainerProps> = (props) => {
-  const { isLoading: authLoading } = useAuth()
-
-  // 如果認證正在載入，顯示載入狀態
-  if (authLoading) {
-    return <LoadingSpinner />
-  }
-
   return <AppContainerClass {...props} />
 }

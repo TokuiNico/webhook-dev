@@ -330,7 +330,10 @@ export const LogFilters = ({
               <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
                 日期: {dateRange.from || '...'} ~ {dateRange.to || '...'}
                 <button
-                  onClick={() => handleDateRangeChange('from', '') || handleDateRangeChange('to', '')}
+                  onClick={() => {
+                    handleDateRangeChange('from', '')
+                    handleDateRangeChange('to', '')
+                  }}
                   className="ml-1 text-gray-600 hover:text-gray-800"
                 >
                   ×

@@ -2,6 +2,9 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 
 from app.core.config import settings
 
+# 導入所有資料庫模型以確保它們被註冊到 Base 元資料中
+from app.db import models
+
 # Async engine and session for FastAPI
 engine = create_async_engine(settings.DATABASE_URL, echo=True)
 AsyncSessionLocal = async_sessionmaker(
