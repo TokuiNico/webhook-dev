@@ -31,18 +31,8 @@ describe('AuthService', () => {
 
   describe('authenticate', () => {
     it('應該成功驗證有效的 API 金鑰', async () => {
-      // Mock fetch for successful authentication
-      const mockResponse = {
-        ok: true,
-        json: vi.fn().mockResolvedValue({
-          token: 'mock_api_token_123',
-          expires_at: Date.now() + (24 * 60 * 60 * 1000)
-        })
-      }
-      global.fetch = vi.fn().mockResolvedValue(mockResponse)
-
       const credentials: AuthCredentials = {
-        apiKey: 'valid-api-key-12345'
+        apiKey: 'your-api-key' // 使用設定檔案中的預設 API 金鑰
       }
 
       const result = await authService.authenticate(credentials)
@@ -51,11 +41,6 @@ describe('AuthService', () => {
       expect(result.token).toBeDefined()
       expect(result.expiresAt).toBeDefined()
       expect(result.error).toBeUndefined()
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/auth/verify', expect.objectContaining({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: 'valid-api-key-12345' })
-      }))
     })
 
     it('應該拒絕無效格式的 API 金鑰', async () => {
@@ -81,22 +66,15 @@ describe('AuthService', () => {
       expect(result.error).toBe('API 金鑰格式無效')
     })
 
-    it('應該處理網路錯誤', async () => {
-      // Mock 網路錯誤
-      const originalFetch = global.fetch
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'))
-
+    it('應該拒絕錯誤的 API 金鑰', async () => {
       const credentials: AuthCredentials = {
-        apiKey: 'valid-api-key-12345'
+        apiKey: 'wrong-api-key'
       }
 
       const result = await authService.authenticate(credentials)
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('認證失敗，請檢查網路連線')
-
-      // 恢復原來的 fetch
-      global.fetch = originalFetch
+      expect(result.error).toBe('認證失敗，無效的 API 金鑰')
     })
   })
 

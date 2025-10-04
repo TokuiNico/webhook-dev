@@ -1,5 +1,7 @@
 // 認證服務 - 處理 Bearer Token 驗證和會話管理
 import { secureStorage } from './secureStorage'
+import { authConfig } from '../config/env'
+import { env } from '../config/env'
 
 export interface AuthCredentials {
   apiKey: string;
@@ -19,9 +21,7 @@ export interface TokenRefreshResult {
 }
 
 class AuthService {
-  private readonly TOKEN_KEY = 'webhook_auth_token';
-  private readonly TOKEN_EXPIRY_KEY = 'webhook_token_expiry';
-  private refreshTimer: NodeJS.Timeout | null = null;
+  private refreshTimer: number | null = null;
 
   /**
    * 驗證 API 金鑰並獲取認證令牌
@@ -36,40 +36,45 @@ class AuthService {
         };
       }
 
-      // 模擬 API 呼叫（未來會替換為真實的後端 API）
-      const response = await fetch('/api/v1/auth/verify', {
-        method: 'POST',
+      // 發送測試請求到後端驗證端點
+      const response = await fetch(`${env.API_BASE_URL}/topics/auth-validators`, {
+        method: 'GET',
         headers: {
+          'Authorization': `Bearer ${credentials.apiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ api_key: credentials.apiKey }),
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        // 驗證成功，使用 API key 作為 token (無過期時間，因為是靜態 key)
+        const token = credentials.apiKey;
+        const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000); // 假設 30 天過期
+
+        this.storeToken(token, expiryTime);
+        this.scheduleTokenRefresh(expiryTime);
+
+        return {
+          success: true,
+          token: token,
+          expiresAt: expiryTime
+        };
+      } else if (response.status === 401) {
         return {
           success: false,
           error: '認證失敗，無效的 API 金鑰'
         };
+      } else {
+        // 其他錯誤，如 500 或網路問題
+        return {
+          success: false,
+          error: '伺服器錯誤，請檢查後端服務'
+        };
       }
-
-      const data = await response.json();
-
-      // 模擬成功認證（使用從 API 返回的資料）
-      const mockToken = data.token || `mock_token_${Date.now()}`;
-      const expiryTime = data.expires_at || Date.now() + (24 * 60 * 60 * 1000); // 24小時後過期
-
-      this.storeToken(mockToken, expiryTime);
-      this.scheduleTokenRefresh(expiryTime);
-
-      return {
-        success: true,
-        token: mockToken,
-        expiresAt: expiryTime
-      };
     } catch (error) {
+      console.error('認證請求失敗:', error);
       return {
         success: false,
-        error: '認證失敗，請檢查網路連線'
+        error: '網路連線錯誤，請檢查後端服務是否運行'
       };
     }
   }
@@ -87,19 +92,20 @@ class AuthService {
         };
       }
 
-      // 模擬刷新令牌的 API 呼叫
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // 由於使用靜態 API key，刷新只是重新驗證
+      const result = await this.authenticate({ apiKey: currentToken });
 
-      const newToken = `refreshed_token_${Date.now()}`;
-      const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
-
-      this.storeToken(newToken, expiryTime);
-      this.scheduleTokenRefresh(expiryTime);
-
-      return {
-        success: true,
-        token: newToken
-      };
+      if (result.success) {
+        return {
+          success: true,
+          token: result.token
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error || '令牌刷新失敗'
+        };
+      }
     } catch (error) {
       return {
         success: false,
@@ -163,9 +169,7 @@ class AuthService {
     if (!expiry) return false;
 
     const timeUntilExpiry = expiry - Date.now();
-    const refreshThreshold = 10 * 60 * 1000; // 10分鐘前開始刷新
-
-    return timeUntilExpiry < refreshThreshold;
+    return timeUntilExpiry < authConfig.tokenRefreshThreshold;
   }
 
   /**
@@ -191,8 +195,8 @@ class AuthService {
    */
   private storeToken(token: string, expiryTime: number): void {
     try {
-      secureStorage.setSecureItem(this.TOKEN_KEY, token);
-      localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
+      secureStorage.setSecureItem(authConfig.tokenKey, token);
+      localStorage.setItem(authConfig.tokenExpiryKey, expiryTime.toString());
     } catch (error) {
       console.error('儲存認證令牌失敗:', error);
     }
@@ -203,7 +207,7 @@ class AuthService {
    */
   private getStoredToken(): string | null {
     try {
-      return secureStorage.getSecureItem(this.TOKEN_KEY);
+      return secureStorage.getSecureItem(authConfig.tokenKey);
     } catch (error) {
       console.error('獲取認證令牌失敗:', error);
       return null;
@@ -215,8 +219,8 @@ class AuthService {
    */
   private removeStoredToken(): void {
     try {
-      secureStorage.removeItem(this.TOKEN_KEY);
-      localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
+      secureStorage.removeItem(authConfig.tokenKey);
+      localStorage.removeItem(authConfig.tokenExpiryKey);
     } catch (error) {
       console.error('移除認證令牌失敗:', error);
     }
@@ -227,7 +231,7 @@ class AuthService {
    */
   private getStoredTokenExpiry(): number | null {
     try {
-      const expiry = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
+      const expiry = localStorage.getItem(authConfig.tokenExpiryKey);
       return expiry ? parseInt(expiry, 10) : null;
     } catch (error) {
       console.error('獲取令牌過期時間失敗:', error);

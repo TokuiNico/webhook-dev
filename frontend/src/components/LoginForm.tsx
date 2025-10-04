@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { AuthCredentials } from '../services/authService'
@@ -14,6 +14,7 @@ export const LoginForm = ({ onLoginSuccess }: LoginFormProps) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+
   const { login } = useAuth()
   const navigate = useNavigate()
 
@@ -27,7 +28,6 @@ export const LoginForm = ({ onLoginSuccess }: LoginFormProps) => {
 
       if (result.success) {
         onLoginSuccess?.()
-        // 登入成功後導航到儀表板
         navigate('/', { replace: true })
       } else {
         setError(result.error || '登入失敗')
@@ -80,8 +80,16 @@ export const LoginForm = ({ onLoginSuccess }: LoginFormProps) => {
           </div>
 
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-700">
+            <div className="rounded-md bg-red-50 p-4 border border-red-200" data-testid="login-error">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-red-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <span className="text-sm font-medium text-red-800">
+                  登入失敗
+                </span>
+              </div>
+              <div className="text-sm text-red-700 mt-1 ml-7">
                 {error}
               </div>
             </div>

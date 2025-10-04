@@ -2,6 +2,15 @@ import { Routes, Route } from 'react-router-dom'
 import { ProtectedRoute } from '../components/ProtectedRoute'
 import { Layout } from '../components/Layout'
 import { LoginForm } from '../components/LoginForm'
+import { SubscriptionList } from '../components/SubscriptionList'
+import { SubscriptionDetail } from '../components/SubscriptionDetail'
+import { SubscriptionForm } from '../components/SubscriptionForm'
+import { SubscriptionEdit } from '../components/SubscriptionEdit'
+import { StatsOverviewChart } from '../components/StatsOverviewChart'
+import { ActivityChart } from '../components/ActivityChart'
+import { SourceStatsChart } from '../components/SourceStatsChart'
+import { LogViewer } from '../components/LogViewer'
+import { LogDetail } from '../components/LogDetail'
 
 const AppRouter = () => {
   return (
@@ -73,9 +82,12 @@ const AppRouter = () => {
                 <Route
                   path="/dashboard"
                   element={
-                    <div>
-                      <h1 className="text-2xl font-bold text-gray-900">儀表板</h1>
-                      <p className="mt-2 text-sm text-gray-600">系統統計數據和監控資訊</p>
+                    <div className="space-y-6">
+                      <div>
+                        <h1 className="text-2xl font-bold text-gray-900">儀表板</h1>
+                        <p className="mt-2 text-sm text-gray-600">系統統計數據和監控資訊</p>
+                      </div>
+                      <StatsOverviewChart />
                     </div>
                   }
                 />
@@ -99,19 +111,55 @@ const AppRouter = () => {
                 />
                 <Route
                   path="/subscriptions"
+                  element={<SubscriptionList />}
+                />
+                <Route
+                  path="/subscriptions/create"
+                  element={<SubscriptionForm />}
+                />
+                <Route
+                  path="/subscriptions/:subscriptionId"
+                  element={<SubscriptionDetail />}
+                />
+                <Route
+                  path="/subscriptions/:subscriptionId/edit"
+                  element={<SubscriptionEdit />}
+                />
+                <Route
+                  path="/stats"
                   element={
-                    <div>
-                      <h1 className="text-2xl font-bold text-gray-900">訂閱管理</h1>
-                      <p className="mt-2 text-sm text-gray-600">管理事件訂閱者和接收端點</p>
+                    <div className="space-y-6">
+                      <div>
+                        <h1 className="text-2xl font-bold text-gray-900">統計分析</h1>
+                        <p className="mt-2 text-sm text-gray-600">詳細的統計數據視覺化和分析</p>
+                      </div>
+                      <StatsOverviewChart />
+                      <ActivityChart />
+                      <SourceStatsChart />
                     </div>
                   }
                 />
                 <Route
                   path="/logs"
                   element={
-                    <div>
-                      <h1 className="text-2xl font-bold text-gray-900">日誌檢視</h1>
-                      <p className="mt-2 text-sm text-gray-600">查看和分析 webhook 事件日誌</p>
+                    <div className="space-y-6">
+                      <div>
+                        <h1 className="text-2xl font-bold text-gray-900">日誌檢視</h1>
+                        <p className="mt-2 text-sm text-gray-600">查看和分析 webhook 事件日誌</p>
+                      </div>
+                      <LogViewer displayType="unified" />
+                    </div>
+                  }
+                />
+                <Route
+                  path="/logs/:logId"
+                  element={
+                    <div className="space-y-6">
+                      <div>
+                        <h1 className="text-2xl font-bold text-gray-900">日誌詳情</h1>
+                        <p className="mt-2 text-sm text-gray-600">查看單個日誌項目的詳細信息</p>
+                      </div>
+                      <LogDetail />
                     </div>
                   }
                 />
