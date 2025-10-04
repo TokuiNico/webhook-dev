@@ -11,6 +11,7 @@ import httpx
 from app.db.models import DispatchLogStatus
 from app.db.session import AsyncSessionLocal
 from app.taskiq.broker_manager import broker
+from app.core.error_handler import raise_task_error, raise_external_service_error
 
 logger = logging.getLogger(__name__)
 
@@ -94,18 +95,33 @@ async def send_webhook_to_subscription(
     except httpx.TimeoutException as e:
         logger.error(f"⏰ 請求超時到 {target_url} (訂閱者: {subscription_id}): {e}")
         error_message = f"Request timeout: {str(e)}"
+        raise_task_error(
+            f"Webhook 發送超時: {target_url}",
+            task_id=event_log_id,
+            task_type="webhook_dispatch"
+        )
 
     except httpx.RequestError as e:
         logger.error(
             f"🌐 網路錯誤發送 webhook 到 {target_url} (訂閱者: {subscription_id}): {e}"
         )
         error_message = f"Network error: {str(e)}"
+        raise_external_service_error(
+            "webhook_target",
+            f"無法連接到目標服務: {target_url}",
+            external_status_code=None
+        )
 
     except Exception as e:
         logger.error(
             f"💥 未預期錯誤發送 webhook 到 {target_url} (訂閱者: {subscription_id}): {e}"
         )
         error_message = f"Unexpected error: {str(e)}"
+        raise_task_error(
+            f"Webhook 發送失敗: {str(e)}",
+            task_id=event_log_id,
+            task_type="webhook_dispatch"
+        )
 
     response_body = response_body or error_message
 

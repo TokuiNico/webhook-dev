@@ -15,6 +15,7 @@ Kiro-style Spec Driven Development implementation on AI-DLC (AI Development Life
 **Specs** (`.kiro/specs/`) - Formalize development process for individual features
 
 ### Active Specifications
+- `webhook-frontend`: 為現有的 webhook 工具建立前端頁面 - 狀態：已初始化
 - Check `.kiro/specs/` for active specifications
 - Use `/kiro/spec-status [feature-name]` to check progress
 
@@ -69,4 +70,3 @@ Managed by `/kiro/steering` command. Updates here reflect command changes.
 - **Always**: Loaded in every interaction (default)
 - **Conditional**: Loaded for specific file patterns (e.g., `"*.test.js"`)
 - **Manual**: Reference with `@filename.md` syntax
-
