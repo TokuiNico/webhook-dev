@@ -1,6 +1,8 @@
 # 🚀 Webhook Gateway
 
-一個強大且可擴展的 Webhook 網關系統，專為接收、驗證、處理和分發來自各種來源的 webhook 事件而設計。
+> **這是一個使用 vibe coding 撰寫的服務，還有很多問題要解決請不要使用**
+
+一個 Webhook 網關系統，專為接收、驗證、處理和分發來自各種來源的 webhook 事件而設計。
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776ab.svg?style=flat&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688.svg?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
