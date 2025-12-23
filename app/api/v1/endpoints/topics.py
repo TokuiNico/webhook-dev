@@ -299,6 +299,12 @@ async def get_auth_validators(api_key: str = Depends(get_api_key)):
         if auth_type in validator_info:
             validators.append(validator_info[auth_type])
 
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"supported_types: {supported_types}")
+    logger.info(f"total_validators: {len(validators)}")
+    logger.info(f"validators: {validators}")
+
     return {
         "supported_types": supported_types,
         "total_validators": len(validators),

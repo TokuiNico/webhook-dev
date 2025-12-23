@@ -5,6 +5,7 @@ from app.db.base import Base
 from app.db.session import engine
 from app.api.v1 import api_router
 from app.taskiq.broker_manager import taskiq_broker_manager
+from app.core.config import settings
 from app.core.error_handler import create_exception_handlers
 import logging
 
@@ -40,7 +41,7 @@ app = FastAPI(
 # 添加 CORS 中間件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 前端開發端口
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
