@@ -205,7 +205,7 @@ class StatsService:
             select(func.count(DispatchLog.id)).where(
                 and_(
                     DispatchLog.dispatched_at >= today_start,
-                    DispatchLog.status == "success",
+                    DispatchLog.status == DispatchLogStatus.SUCCESS,
                 )
             )
         )
