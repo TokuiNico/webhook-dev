@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { statsService } from '../services/statsService'
-import type { OverviewStats, ChartData, StatsApiResponse } from '../types/stats'
+import type { OverviewStats, StatsApiResponse } from '../types/stats'
 
 interface StatsOverviewChartProps {
   /** 自定義 CSS 類名 */

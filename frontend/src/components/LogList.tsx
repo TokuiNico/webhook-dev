@@ -276,13 +276,13 @@ export const LogList = ({
 
                     {/* 狀態徽章 */}
                     <span className={`inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusColor(log.status)}`}>
-                      {log.status || '未知'}
-                    </span>
+                    {log.status || '未知'}
+                  </span>
 
                     {/* 序列號 */}
                     <span className="text-sm font-semibold text-gray-900">
                       #{String(index + 1).padStart(3, '0')}
-                    </span>
+                      </span>
                   </div>
 
                   <div className="flex items-center space-x-3">
@@ -345,7 +345,7 @@ export const LogList = ({
                           HTTP {log.response_status_code}
                         </span>
                       )}
-                    </div>
+                      </div>
                     {log.error_message && (
                       <span className="text-red-600 text-xs">⚠️ 有錯誤</span>
                     )}
@@ -528,8 +528,8 @@ export const LogList = ({
                                           {log.response_status_code >= 200 && log.response_status_code < 300 ? '✅ 成功' :
                                            log.response_status_code >= 400 && log.response_status_code < 500 ? '❌ 客戶端錯誤' :
                                            log.response_status_code >= 500 ? '🔥 服務器錯誤' : '❓ 其他狀態'}
-                                        </div>
-                                      </div>
+                  </div>
+                </div>
 
                                       {(log.detailedData as any).response_body && (
                                         <div className="md:col-span-2">
@@ -570,14 +570,14 @@ export const LogList = ({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                           </svg>
                           無法載入詳細資料
-                        </div>
+                  </div>
                       )}
-                    </div>
+                  </div>
                   )}
                 </div>
               </div>
             ))}
-          </div>
+            </div>
         )}
       </div>
 

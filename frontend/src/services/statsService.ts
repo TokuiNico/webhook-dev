@@ -9,11 +9,10 @@ import type {
   ActivityStats,
   SourceStats,
   ChartData,
-  ChartDataset,
-  TimeRange,
   ChartType,
   ExportFormat,
-  StatsApiResponse
+  StatsApiResponse,
+  SourceStatItem
 } from '../types/stats'
 import { authService } from './authService'
 import { env } from '../config/env'
@@ -172,14 +171,14 @@ class StatsService {
       }
     }
 
-    if (type === 'sources' && 'sources' in data) {
+    if (type === 'sources' && 'source_statistics' in data) {
       const sourceData = data as SourceStats
       return {
-        labels: sourceData.sources.map(item => item.source_name),
+        labels: sourceData.source_statistics.map((item: SourceStatItem) => item.source),
         datasets: [
           {
             label: 'Total Webhooks',
-            data: sourceData.sources.map(item => item.total_webhooks),
+            data: sourceData.source_statistics.map((item: SourceStatItem) => item.webhook_count),
             backgroundColor: [
               '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
               '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'

@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.log('開發環境自動登入中...')
           const result = await authService.authenticate({ apiKey: 'hello' })
           if (result.success) {
-            setCurrentToken(result.token)
+            setCurrentToken(result.token || null)
             setIsAuthenticated(true)
             console.log('開發環境自動登入成功')
           } else {

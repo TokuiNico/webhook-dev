@@ -32,14 +32,14 @@ export const LogViewer = ({ displayType = 'unified', className = '' }: LogViewer
 
     if (trimmedQuery) {
       // 如果有搜尋查詢，設定搜尋標記
-      setFilters(prev => ({
+      setFilters((prev: any) => ({
         ...prev,
         skip: 0,
         search: trimmedQuery
       }))
     } else {
       // 如果搜尋查詢為空，清除搜尋標記
-      setFilters(prev => {
+      setFilters((prev: any) => {
         const { search, ...rest } = prev
         return {
           ...rest,
