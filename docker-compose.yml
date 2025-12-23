@@ -57,6 +57,8 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-webhook_user}:${POSTGRES_PASSWORD:-webhook_password}@db:5432/${POSTGRES_DB:-webhook_db}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin}@rabbitmq:5672/
       - USE_SQLITE=false
+      - USE_MEMORY_BROKER=false
+      - DEVELOPMENT=false
       - API_KEY=${API_KEY:-change-me-in-production}
       - CORS_ORIGINS=["*"]
     env_file:
@@ -86,6 +88,8 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-webhook_user}:${POSTGRES_PASSWORD:-webhook_password}@db:5432/${POSTGRES_DB:-webhook_db}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin}@rabbitmq:5672/
       - USE_SQLITE=false
+      - USE_MEMORY_BROKER=false
+      - DEVELOPMENT=false
     env_file:
       - .env
     volumes:

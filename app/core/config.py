@@ -10,13 +10,10 @@ class Settings(BaseSettings):
     # RabbitMQ settings
     RABBITMQ_URL: str = "amqp://guest:guest@localhost:5672/"
 
-    # Development settings
-    DEVELOPMENT: bool = False
-    USE_SQLITE: bool = False  # Production default should be False (use PostgreSQL)
-
-    # TaskIQ settings
-    USE_MEMORY_BROKER: bool = False  # Production default should be False (use RabbitMQ)
-    REDIS_URL: str = "redis://localhost:6379/0"  # 用於開發時的 result backend
+    # Development settings (defaults for local development)
+    DEVELOPMENT: bool = True
+    USE_SQLITE: bool = True
+    USE_MEMORY_BROKER: bool = True  # Use InMemoryBroker for development
 
     # Security settings
     API_KEY: str = "change-me-in-production"
@@ -26,9 +23,9 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["*"]
 
     # Server settings
-    DOMAIN: str = "http://localhost:8000"  # 用於生成 ingest_url
+    DOMAIN: str = "http://localhost:8000"
 
-    # PostgreSQL settings (for production)
+    # PostgreSQL settings (for production, overridden by DATABASE_URL)
     POSTGRES_USER: str = "webhook_user"
     POSTGRES_PASSWORD: str = "webhook_password"
     POSTGRES_DB: str = "webhook_db"
