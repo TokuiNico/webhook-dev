@@ -29,11 +29,6 @@ def get_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)) -
     """
     expected_key = settings.API_KEY
 
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"expected_key: {expected_key}")
-    logger.info(f"credentials.credentials: {credentials.credentials}")
-
     # 檢查 API 金鑰是否已配置
     if not settings.API_KEY:
         raise HTTPException(
