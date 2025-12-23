@@ -11,9 +11,7 @@ dependencies = [
     "fastapi",
     "uvicorn[standard]",
     "pydantic",
-    "mysqlclient", # Driver for MySQL
-    "aiomysql", # Async MySQL driver
-    "pymysql", # Required by aiomysql
+    "asyncpg", # Async PostgreSQL driver
     "alembic", # For database migrations
     "python-multipart", # For handling form data
     "lxml", # For handling XML
