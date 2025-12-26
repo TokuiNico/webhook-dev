@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 interface StatCardProps {
   /** 卡片標題 */
@@ -7,7 +8,7 @@ interface StatCardProps {
   value: string | number
   /** 圖標 */
   icon: ReactNode
-  /** 變化值（如 "+12%" 或 "-5%"） */
+  /** 變化值（如 "12%"） */
   change?: string
   /** 變化類型 */
   changeType?: 'increase' | 'decrease' | 'neutral'
@@ -19,10 +20,6 @@ interface StatCardProps {
   tooltip?: string
 }
 
-/**
- * 統計卡片元件
- * 顯示系統關鍵指標的卡片式佈局
- */
 export const StatCard = ({
   title,
   value,
@@ -33,93 +30,69 @@ export const StatCard = ({
   className = '',
   tooltip
 }: StatCardProps) => {
-  // 格式化數值（添加千分位分隔符）
   const formatValue = (val: string | number): string => {
     if (typeof val === 'string') return val
     return val.toLocaleString('zh-TW')
   }
 
-  // 根據變化類型獲取顏色和圖標
-  const getChangeStyles = () => {
+  const getChangeMeta = () => {
     switch (changeType) {
       case 'increase':
-        return {
-          textColor: 'text-green-600',
-          bgColor: 'bg-green-50',
-          icon: '↗',
-          iconColor: 'text-green-500'
-        }
+        return { color: 'text-emerald-600 bg-emerald-50', icon: <TrendingUp size={14} />, text: '較上期增加' }
       case 'decrease':
-        return {
-          textColor: 'text-red-600',
-          bgColor: 'bg-red-50',
-          icon: '↘',
-          iconColor: 'text-red-500'
-        }
-      case 'neutral':
+        return { color: 'text-rose-600 bg-rose-50', icon: <TrendingDown size={14} />, text: '較上期減少' }
       default:
-        return {
-          textColor: 'text-gray-600',
-          bgColor: 'bg-gray-50',
-          icon: '→',
-          iconColor: 'text-gray-500'
-        }
+        return { color: 'text-slate-600 bg-slate-50', icon: <Minus size={14} />, text: '與上期持平' }
     }
   }
 
-  const changeStyles = getChangeStyles()
+  const meta = getChangeMeta()
 
-  return (
-    <div
-      className={`bg-white overflow-hidden shadow rounded-lg ${isLoading ? 'animate-pulse' : ''} ${className}`}
-      title={tooltip}
-    >
-      <div className="p-5">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <div className={`p-3 rounded-md ${isLoading ? 'bg-gray-200' : 'bg-blue-500'}`}>
-              <div className={`text-white ${isLoading ? 'invisible' : ''}`}>
-                {icon}
-              </div>
-            </div>
+  if (isLoading) {
+    return (
+      <div className={`bg-white rounded-xl p-6 shadow-soft ${className}`}>
+        <div className="animate-pulse space-y-4">
+          <div className="flex justify-between items-start">
+            <div className="h-10 w-10 bg-slate-100 rounded-lg" />
+            <div className="h-4 w-16 bg-slate-100 rounded" />
           </div>
-          <div className="ml-5 w-0 flex-1">
-            <dl>
-              <dt className={`text-sm font-medium ${isLoading ? 'text-gray-400' : 'text-gray-500'} truncate`}>
-                {title}
-              </dt>
-              <dd className="flex items-baseline">
-                <div className={`text-lg font-semibold ${isLoading ? 'text-gray-400' : 'text-gray-900'}`}>
-                  {isLoading ? '...' : formatValue(value)}
-                </div>
-                {change && (
-                  <div className={`ml-2 flex items-baseline text-sm font-semibold ${changeStyles.textColor}`}>
-                    <span className={`${changeStyles.iconColor} mr-1`}>
-                      {changeStyles.icon}
-                    </span>
-                    {change}
-                  </div>
-                )}
-              </dd>
-            </dl>
+          <div className="space-y-2">
+            <div className="h-4 w-24 bg-slate-100 rounded" />
+            <div className="h-8 w-32 bg-slate-100 rounded" />
           </div>
         </div>
       </div>
+    )
+  }
 
-      {change && (
-        <div className={`bg-gray-50 px-5 py-3 ${changeStyles.bgColor}`}>
-          <div className="text-sm">
-            <div className={`font-medium ${changeStyles.textColor}`}>
-              {changeType === 'increase' && '較上期增加'}
-              {changeType === 'decrease' && '較上期減少'}
-              {changeType === 'neutral' && '與上期持平'}
-            </div>
-            <div className="text-gray-500">
-              {change} 的變化
-            </div>
-          </div>
+  return (
+    <div
+      className={`bg-white rounded-xl p-6 shadow-soft hover:shadow-lg transition-all duration-300 border border-slate-100 group ${className}`}
+      title={tooltip}
+    >
+      <div className="flex justify-between items-start mb-4">
+        <div className="p-3 bg-primary-50 rounded-lg text-primary-600 group-hover:bg-primary-600 group-hover:text-white transition-colors duration-300">
+          {icon}
         </div>
-      )}
+        {change && (
+          <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${meta.color}`}>
+            {meta.icon}
+            {change}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h3 className="text-sm font-medium text-slate-500 mb-1">{title}</h3>
+        <div className="text-2xl font-bold text-slate-900 tracking-tight">
+          {formatValue(value)}
+        </div>
+        {change && (
+          <p className="mt-1 text-xs text-slate-400">
+            {meta.text}
+          </p>
+        )}
+      </div>
     </div>
   )
 }
