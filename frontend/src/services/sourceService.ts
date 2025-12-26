@@ -218,25 +218,6 @@ class SourceService {
     }
   }
 
-  /**
-   * 驗證來源名稱可用性
-   * @param name 來源名稱
-   */
-  async checkSourceNameAvailability(name: string): Promise<ApiResponse<{ available: boolean }>> {
-    try {
-      const response = await axios.get<{ available: boolean }>(`${this.baseUrl}/check-name`, {
-        params: { name }
-      })
-
-      return {
-        data: response.data,
-        loading: false,
-        error: undefined
-      }
-    } catch (error) {
-      return this.handleApiError(error)
-    }
-  }
 
   /**
    * 處理 API 錯誤，統一錯誤格式

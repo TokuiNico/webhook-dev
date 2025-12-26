@@ -19,7 +19,7 @@ class SourceService:
         self,
         db: AsyncSession,
         name: str,
-        secret: str,
+        secret: Optional[str] = None,
         auth_type: str = "none",
         auth_config: Optional[Dict[str, Any]] = None,
     ) -> dict:
@@ -29,7 +29,7 @@ class SourceService:
         Args:
             db: 數據庫會話
             name: 來源名稱（如 'github', 'stripe'）- 現在允許重複
-            secret: 用於驗證的密鑰
+            secret: 用於驗證的密鑰（當 auth_type 為 "signature" 時必填，為 "none" 時可選）
             auth_type: 認證類型（'signature' 或 'none'）
             auth_config: 認證配置（JSON 格式）
 
@@ -140,6 +140,15 @@ class SourceService:
             source.auth_type = auth_type
         if auth_config is not None:
             source.auth_config = auth_config
+
+        # 驗證：如果 auth_type 為 "signature"，必須有 secret
+        final_auth_type = auth_type if auth_type is not None else source.auth_type
+        final_secret = secret if secret is not None else source.secret
+        if final_auth_type == "signature" and not final_secret:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="當認證類型為 'signature' 時，secret 為必填項目"
+            )
 
         # 設置更新時間
         from datetime import datetime

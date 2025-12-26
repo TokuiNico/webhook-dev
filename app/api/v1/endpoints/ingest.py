@@ -41,6 +41,9 @@ async def receive_webhook(
         content_type = request.headers.get("content-type", "application/octet-stream")
         headers = dict(request.headers)
 
+        # 檢測是否為測試模式
+        is_test = request.headers.get("x-test-mode", "").lower() == "true"
+
         # 委託給服務層處理
         result = await webhook_service.process_webhook_by_topic_id(
             topic_id=topic_id,
@@ -49,6 +52,7 @@ async def receive_webhook(
             headers=headers,
             source_ip=client_ip,
             db=db,
+            is_test=is_test,
         )
 
         return JSONResponse(status_code=202, content=result)

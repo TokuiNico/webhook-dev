@@ -8,7 +8,7 @@ export type AuthType = 'signature' | 'none'
 // 來源基本資訊
 export interface SourceBase {
   name: string
-  secret: string
+  secret?: string  // Required when auth_type is "signature", optional when "none"
   auth_type: AuthType
   auth_config?: Record<string, any>
 }

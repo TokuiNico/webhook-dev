@@ -25,17 +25,17 @@ class Source(Base):
         String(255), nullable=False
     )  # e.g., "github", "stripe" - 移除 unique 約束和 index
     secret = Column(
-        String(255), nullable=False
-    )  # Secret key for HMAC signature validation
+        String(255), nullable=True
+    )  # Secret key for HMAC signature validation (optional when auth_type is "none")
     auth_type = Column(
         String(50), nullable=False, default="none"
     )  # Authentication type - 預設為 none
     auth_config = Column(
         JSON, nullable=True, default=None
     )  # Authentication configuration (JSON format)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(
-        DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
+        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
     )
 
     topics = relationship("Topic", back_populates="source")
@@ -48,9 +48,9 @@ class Topic(Base):
     name = Column(String(255), nullable=False)  # 移除 unique 約束和 index
     source_id = Column(String(255), ForeignKey("sources.id"), nullable=False)
     description = Column(Text)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(
-        DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
+        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
     )
 
     source = relationship("Source", back_populates="topics")
@@ -70,9 +70,9 @@ class Subscription(Base):
         String(2048), nullable=False
     )  # URL to which the webhook should be sent
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(
-        DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
+        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
     )
 
     topic = relationship("Topic", back_populates="subscriptions")
@@ -96,7 +96,8 @@ class EventLog(Base):
     content_type = Column(String(255))  # Store the original Content-Type header
     payload = Column(Text)  # Store the raw request body as LONGTEXT
     status = Column(Enum(EventLogStatus), default=EventLogStatus.RECEIVED)
-    received_at = Column(DateTime, default=datetime.datetime.utcnow)
+    is_test = Column(Boolean, default=False, nullable=False)  # Mark test events to exclude from statistics
+    received_at = Column(DateTime, default=datetime.datetime.now)
 
     topic = relationship("Topic", back_populates="event_logs")
     dispatch_logs = relationship("DispatchLog", back_populates="event_log")
@@ -119,7 +120,7 @@ class DispatchLog(Base):
     status = Column(Enum(DispatchLogStatus))
     response_status_code = Column(Integer)
     response_body = Column(Text)
-    dispatched_at = Column(DateTime, default=datetime.datetime.utcnow)
+    dispatched_at = Column(DateTime, default=datetime.datetime.now)
 
     event_log = relationship("EventLog", back_populates="dispatch_logs")
     subscription = relationship("Subscription", back_populates="dispatch_logs")

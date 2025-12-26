@@ -110,6 +110,9 @@ class WebhookService:
 
         # 對於簽名驗證，確保有 secret
         if source.auth_type == "signature":
+            if not source.secret:
+                logger.warning(f"⚠️ 來源 {source.id} 使用簽名驗證但缺少 secret")
+                raise ValueError(f"來源 {source.name} 使用簽名驗證但缺少 secret")
             config["secret"] = str(source.secret)
 
             # 如果沒有指定格式，根據來源名稱推測
@@ -167,6 +170,7 @@ class WebhookService:
         headers: Dict[str, str],
         source_ip: str,
         db: AsyncSession,
+        is_test: bool = False,
     ) -> Dict[str, str]:
         """
         通過 topic_id 處理 webhook 接收流程
@@ -178,6 +182,7 @@ class WebhookService:
             headers: 請求頭
             source_ip: 來源IP
             db: 數據庫會話
+            is_test: 是否為測試事件（預設為 False）
 
         Returns:
             Dict[str, str]: 處理結果
@@ -185,7 +190,7 @@ class WebhookService:
         Raises:
             HTTPException: 當驗證失敗或處理錯誤時
         """
-        logger.info(f"📨 收到 webhook - 主題 ID: {topic_id}, 類型: {content_type}")
+        logger.info(f"📨 收到 webhook - 主題 ID: {topic_id}, 類型: {content_type}, 測試模式: {is_test}")
 
         # 1. 通過 topic_id 獲取主題和來源
         source, topic = await self.get_topic_by_id(topic_id, db)
@@ -200,6 +205,7 @@ class WebhookService:
             headers=headers,
             source_ip=source_ip,
             status=EventLogStatus.RECEIVED,
+            is_test=is_test,
         )
 
         # 3. 執行認證驗證
@@ -241,7 +247,10 @@ class WebhookService:
             subscriptions=subscriptions,
         )
 
-        return {"message": "Webhook received and queued for processing"}
+        return {
+            "message": "Webhook received and queued for processing",
+            "event_log_id": str(event_log.id),
+        }
 
 
 # 全局服務實例

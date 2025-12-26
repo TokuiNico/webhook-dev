@@ -36,10 +36,6 @@ export const SourceForm = ({
   })
   const [errors, setErrors] = useState<SourceFormErrors>({})
   const [loading, setLoading] = useState(false)
-  const [nameAvailability, setNameAvailability] = useState<{
-    checking: boolean
-    available?: boolean
-  }>({ checking: false })
 
   // 初始化表單數據
   useEffect(() => {
@@ -55,17 +51,17 @@ export const SourceForm = ({
     // 驗證來源名稱
     if (!formData.name.trim()) {
       newErrors.name = '來源名稱為必填項目'
-    } else if (!/^[a-z0-9-]+$/.test(formData.name)) {
-      newErrors.name = '來源名稱只能包含小寫字母、數字和連字號'
     } else if (formData.name.length < 3) {
       newErrors.name = '來源名稱至少需要 3 個字符'
     }
 
-    // 驗證認證密鑰
-    if (!formData.secret) {
-      newErrors.secret = '認證密鑰為必填項目'
-    } else if (formData.secret.length < 8) {
-      newErrors.secret = '認證密鑰至少需要 8 個字符'
+    // 驗證認證密鑰（僅在簽名驗證時必填）
+    if (formData.auth_type === 'signature') {
+      if (!formData.secret) {
+        newErrors.secret = '認證密鑰為必填項目（簽名驗證需要）'
+      } else if (formData.secret.length < 8) {
+        newErrors.secret = '認證密鑰至少需要 8 個字符'
+      }
     }
 
     // 驗證認證配置（當選擇簽名驗證時）
@@ -90,30 +86,6 @@ export const SourceForm = ({
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }))
     }
-
-    // 檢查名稱可用性
-    if (field === 'name' && value && value !== initialData?.name) {
-      checkNameAvailability(value)
-    }
-  }
-
-  // 檢查名稱可用性
-  const checkNameAvailability = async (name: string) => {
-    if (!name || name === initialData?.name) return
-
-    setNameAvailability({ checking: true })
-
-    try {
-      const response = await sourceService.checkSourceNameAvailability(name)
-
-      if (response.error) {
-        setNameAvailability({ checking: false, available: false })
-      } else {
-        setNameAvailability({ checking: false, available: response.data?.available })
-      }
-    } catch (err) {
-      setNameAvailability({ checking: false, available: false })
-    }
   }
 
   // 處理認證類型變更
@@ -121,11 +93,16 @@ export const SourceForm = ({
     setFormData(prev => ({
       ...prev,
       auth_type: authType,
+      secret: authType === 'none' ? undefined : prev.secret, // 切換到無驗證時清除 secret
       auth_config: authType === 'none' ? {} : prev.auth_config
     }))
 
+    // 清除相關錯誤
     if (errors.auth_config) {
       setErrors(prev => ({ ...prev, auth_config: undefined }))
+    }
+    if (errors.secret) {
+      setErrors(prev => ({ ...prev, secret: undefined }))
     }
   }
 
@@ -198,7 +175,6 @@ export const SourceForm = ({
               id="name"
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
-              onBlur={(e) => e.target.value && checkNameAvailability(e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.name ? 'border-red-300' : 'border-gray-300'
               }`}
@@ -207,36 +183,31 @@ export const SourceForm = ({
             {errors.name && (
               <p className="mt-1 text-sm text-red-600">{errors.name}</p>
             )}
-            {nameAvailability.checking && (
-              <p className="mt-1 text-sm text-gray-600">檢查名稱可用性中...</p>
-            )}
-            {nameAvailability.available === false && !nameAvailability.checking && (
-              <p className="mt-1 text-sm text-red-600">此來源名稱已被使用</p>
-            )}
-            {nameAvailability.available === true && !nameAvailability.checking && (
-              <p className="mt-1 text-sm text-green-600">✓ 來源名稱可用</p>
-            )}
           </div>
 
-          {/* 認證密鑰 */}
-          <div>
-            <label htmlFor="secret" className="block text-sm font-medium text-gray-700 mb-1">
-              認證密鑰 <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="password"
-              id="secret"
-              value={formData.secret}
-              onChange={(e) => handleInputChange('secret', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.secret ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="用於驗證 webhook 真實性的密鑰"
-            />
-            {errors.secret && (
-              <p className="mt-1 text-sm text-red-600">{errors.secret}</p>
-            )}
-          </div>
+          {/* 認證密鑰 - 僅在非無驗證模式時顯示 */}
+          {formData.auth_type !== 'none' && (
+            <div>
+              <label htmlFor="secret" className="block text-sm font-medium text-gray-700 mb-1">
+                認證密鑰 {formData.auth_type === 'signature' && <span className="text-red-500">*</span>}
+              </label>
+              <input
+                type="password"
+                id="secret"
+                value={formData.secret || ''}
+                onChange={(e) => handleInputChange('secret', e.target.value)}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.secret ? 'border-red-300' : 'border-gray-300'
+                }`}
+                placeholder={formData.auth_type === 'signature'
+                  ? '用於驗證 webhook 真實性的密鑰（必填）'
+                  : '用於驗證 webhook 真實性的密鑰（選填）'}
+              />
+              {errors.secret && (
+                <p className="mt-1 text-sm text-red-600">{errors.secret}</p>
+              )}
+            </div>
+          )}
 
           {/* 認證類型 */}
           <div>

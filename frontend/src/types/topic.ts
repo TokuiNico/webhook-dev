@@ -74,3 +74,17 @@ export interface TopicFormErrors {
   description?: string
   source_id?: string
 }
+
+// Webhook 測試請求
+export interface WebhookTestRequest {
+  payload: string
+  content_type: string  // application/json, application/xml, application/x-www-form-urlencoded
+}
+
+// Webhook 測試響應
+export interface WebhookTestResponse {
+  success: boolean
+  event_log_id?: string
+  message: string
+  error?: string
+}

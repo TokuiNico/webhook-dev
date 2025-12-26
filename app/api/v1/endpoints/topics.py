@@ -6,6 +6,7 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any
+from pydantic import BaseModel
 
 from app.api.v1.deps import get_authenticated_db, get_api_key
 from app.services.topic_service import source_service, topic_service
@@ -310,3 +311,86 @@ async def get_auth_validators(api_key: str = Depends(get_api_key)):
         "total_validators": len(validators),
         "validators": validators,
     }
+
+
+# Webhook test endpoint
+class WebhookTestRequest(BaseModel):
+    payload: str
+    content_type: str = "application/json"  # Default to JSON
+
+
+class WebhookTestResponse(BaseModel):
+    success: bool
+    event_log_id: Optional[str] = None
+    message: str
+    error: Optional[str] = None
+
+
+@router.post("/topics/{topic_id}/test", response_model=WebhookTestResponse)
+async def test_webhook(
+    topic_id: str,
+    test_request: WebhookTestRequest,
+    db: AsyncSession = Depends(get_authenticated_db),
+):
+    """
+    測試 webhook 接收功能
+
+    模擬外部服務發送 webhook 到指定主題的接收端點。
+    測試事件會被標記為測試模式，不會影響統計數據。
+
+    **參數：**
+    - `payload`: 測試用的 payload 內容（字串格式）
+    - `content_type`: Content-Type，支援 application/json, application/xml, application/x-www-form-urlencoded
+
+    **範例：**
+    ```json
+    {
+        "payload": "{\"event\": \"test\", \"data\": \"test data\"}",
+        "content_type": "application/json"
+    }
+    ```
+    """
+    try:
+        # 驗證主題是否存在
+        topic = await topic_service.get_topic_by_id(db, topic_id)
+        if not topic:
+            raise HTTPException(status_code=404, detail="主題不存在")
+
+        # 準備測試請求的 headers
+        headers = {
+            "content-type": test_request.content_type,
+            "x-test-mode": "true",  # 標記為測試模式
+        }
+
+        # 將 payload 轉換為 bytes
+        body_bytes = test_request.payload.encode("utf-8")
+
+        # 調用 webhook 處理服務（測試模式）
+        result = await webhook_service.process_webhook_by_topic_id(
+            topic_id=topic_id,
+            body=body_bytes,
+            content_type=test_request.content_type,
+            headers=headers,
+            source_ip="127.0.0.1",  # 測試請求來源 IP
+            db=db,
+            is_test=True,  # 標記為測試事件
+        )
+
+        return WebhookTestResponse(
+            success=True,
+            event_log_id=result.get("event_log_id"),
+            message=result.get("message", "Webhook 測試請求已成功處理"),
+        )
+
+    except HTTPException:
+        # 重新拋出 HTTP 異常
+        raise
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"測試 webhook 時發生錯誤: {e}")
+        return WebhookTestResponse(
+            success=False,
+            message="測試 webhook 時發生錯誤",
+            error=str(e),
+        )

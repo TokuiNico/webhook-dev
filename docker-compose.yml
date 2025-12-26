@@ -8,6 +8,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-webhook_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-webhook_password}
       POSTGRES_DB: ${POSTGRES_DB:-webhook_db}
+      TZ: Asia/Taipei
     ports:
       - "5432:5432"
     volumes:
@@ -31,6 +32,7 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin}
+      TZ: Asia/Taipei
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -61,6 +63,7 @@ services:
       - DEVELOPMENT=false
       - API_KEY=${API_KEY:-change-me-in-production}
       - CORS_ORIGINS=["*"]
+      - TZ=Asia/Taipei
     env_file:
       - .env
     volumes:
@@ -90,6 +93,7 @@ services:
       - USE_SQLITE=false
       - USE_MEMORY_BROKER=false
       - DEVELOPMENT=false
+      - TZ=Asia/Taipei
     env_file:
       - .env
     volumes:
@@ -106,6 +110,8 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+    environment:
+      - TZ=Asia/Taipei
     depends_on:
       api:
         condition: service_healthy

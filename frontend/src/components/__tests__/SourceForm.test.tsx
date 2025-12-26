@@ -8,8 +8,7 @@ import type { SourceCreate } from '../../types/source'
 // Mock the source service
 vi.mock('../../services/sourceService', () => ({
   sourceService: {
-    createSource: vi.fn(),
-    checkSourceNameAvailability: vi.fn()
+    createSource: vi.fn()
   }
 }))
 
@@ -190,18 +189,6 @@ describe('SourceForm', () => {
     })
   })
 
-  it('validates source name format', async () => {
-    renderWithProviders(<SourceForm />)
-
-    const nameInput = screen.getByLabelText(/來源名稱/)
-    fireEvent.change(nameInput, { target: { value: 'invalid name with spaces' } })
-    fireEvent.blur(nameInput)
-
-    await waitFor(() => {
-      expect(screen.getByText('來源名稱只能包含小寫字母、數字和連字號')).toBeInTheDocument()
-    })
-  })
-
   it('validates secret strength', async () => {
     renderWithProviders(<SourceForm />)
 
@@ -214,42 +201,6 @@ describe('SourceForm', () => {
     })
   })
 
-  it('checks name availability when name changes', async () => {
-    mockSourceService.checkSourceNameAvailability.mockResolvedValue({
-      data: { available: false },
-      loading: false,
-      error: undefined
-    })
-
-    renderWithProviders(<SourceForm />)
-
-    const nameInput = screen.getByLabelText(/來源名稱/)
-    fireEvent.change(nameInput, { target: { value: 'github' } })
-    fireEvent.blur(nameInput)
-
-    await waitFor(() => {
-      expect(mockSourceService.checkSourceNameAvailability).toHaveBeenCalledWith('github')
-      expect(screen.getByText('此來源名稱已被使用')).toBeInTheDocument()
-    })
-  })
-
-  it('shows success message when name is available', async () => {
-    mockSourceService.checkSourceNameAvailability.mockResolvedValue({
-      data: { available: true },
-      loading: false,
-      error: undefined
-    })
-
-    renderWithProviders(<SourceForm />)
-
-    const nameInput = screen.getByLabelText(/來源名稱/)
-    fireEvent.change(nameInput, { target: { value: 'unique-name' } })
-    fireEvent.blur(nameInput)
-
-    await waitFor(() => {
-      expect(screen.getByText('✓ 來源名稱可用')).toBeInTheDocument()
-    })
-  })
 
   it('navigates back when cancel button is clicked', () => {
     renderWithProviders(<SourceForm />)

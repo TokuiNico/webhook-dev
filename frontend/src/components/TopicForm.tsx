@@ -79,8 +79,6 @@ export const TopicForm = ({
     // 驗證主題名稱
     if (!formData.name.trim()) {
       newErrors.name = '主題名稱為必填項目'
-    } else if (!/^[a-z0-9-_\.]+$/.test(formData.name)) {
-      newErrors.name = '主題名稱只能包含字母、數字、連字號、下劃線和點'
     } else if (formData.name.length < 2) {
       newErrors.name = '主題名稱至少需要 2 個字符'
     }

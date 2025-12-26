@@ -87,7 +87,7 @@ class StatsService:
         Returns:
             Dict[str, Any]: 來源統計數據
         """
-        # 獲取各來源的 webhook 統計
+        # 獲取各來源的 webhook 統計（排除測試事件）
         source_stats_result = await db.execute(
             select(
                 Source.name,
@@ -95,7 +95,7 @@ class StatsService:
                 func.count(func.distinct(Topic.id)).label("topic_count"),
             )
             .join(Topic, Source.id == Topic.source_id)
-            .outerjoin(EventLog, Topic.id == EventLog.topic_id)
+            .outerjoin(EventLog, and_(Topic.id == EventLog.topic_id, EventLog.is_test == False))
             .group_by(Source.id, Source.name)
             .order_by(func.count(EventLog.id).desc())
         )
@@ -122,9 +122,11 @@ class StatsService:
         Returns:
             Dict[str, Any]: 主題統計數據
         """
-        # 獲取 webhook 數量 (event_logs 數量)
+        # 獲取 webhook 數量 (event_logs 數量，排除測試事件)
         webhook_count_result = await db.execute(
-            select(func.count(EventLog.id)).where(EventLog.topic_id == topic_id)
+            select(func.count(EventLog.id)).where(
+                and_(EventLog.topic_id == topic_id, EventLog.is_test == False)
+            )
         )
         webhook_count = webhook_count_result.scalar() or 0
 
@@ -134,10 +136,10 @@ class StatsService:
         )
         subscriber_count = subscriber_count_result.scalar() or 0
 
-        # 獲取最後活動時間 (最新 event_log 的 received_at)
+        # 獲取最後活動時間 (最新 event_log 的 received_at，排除測試事件)
         last_activity_result = await db.execute(
             select(EventLog.received_at)
-            .where(EventLog.topic_id == topic_id)
+            .where(and_(EventLog.topic_id == topic_id, EventLog.is_test == False))
             .order_by(EventLog.received_at.desc())
             .limit(1)
         )
@@ -156,19 +158,25 @@ class StatsService:
     ) -> Dict[str, Any]:
         """執行並行統計查詢"""
 
-        # 總 webhook 數
-        total_webhooks_result = await db.execute(select(func.count(EventLog.id)))
+        # 總 webhook 數（排除測試事件）
+        total_webhooks_result = await db.execute(
+            select(func.count(EventLog.id)).where(EventLog.is_test == False)
+        )
         total_webhooks = total_webhooks_result.scalar() or 0
 
-        # 今日 webhook 數
+        # 今日 webhook 數（排除測試事件）
         today_webhooks_result = await db.execute(
-            select(func.count(EventLog.id)).where(EventLog.received_at >= today_start)
+            select(func.count(EventLog.id)).where(
+                and_(EventLog.received_at >= today_start, EventLog.is_test == False)
+            )
         )
         today_webhooks = today_webhooks_result.scalar() or 0
 
-        # 本週 webhook 數
+        # 本週 webhook 數（排除測試事件）
         week_webhooks_result = await db.execute(
-            select(func.count(EventLog.id)).where(EventLog.received_at >= week_start)
+            select(func.count(EventLog.id)).where(
+                and_(EventLog.received_at >= week_start, EventLog.is_test == False)
+            )
         )
         week_webhooks = week_webhooks_result.scalar() or 0
 
@@ -199,21 +207,29 @@ class StatsService:
     async def _calculate_success_rate(
         self, db: AsyncSession, today_start: datetime
     ) -> float:
-        """計算成功率"""
+        """計算成功率（排除測試事件）"""
 
         successful_dispatches_result = await db.execute(
-            select(func.count(DispatchLog.id)).where(
+            select(func.count(DispatchLog.id))
+            .join(EventLog, DispatchLog.event_log_id == EventLog.id)
+            .where(
                 and_(
                     DispatchLog.dispatched_at >= today_start,
                     DispatchLog.status == DispatchLogStatus.SUCCESS,
+                    EventLog.is_test == False,
                 )
             )
         )
         successful_dispatches = successful_dispatches_result.scalar() or 0
 
         total_dispatches_result = await db.execute(
-            select(func.count(DispatchLog.id)).where(
-                DispatchLog.dispatched_at >= today_start
+            select(func.count(DispatchLog.id))
+            .join(EventLog, DispatchLog.event_log_id == EventLog.id)
+            .where(
+                and_(
+                    DispatchLog.dispatched_at >= today_start,
+                    EventLog.is_test == False,
+                )
             )
         )
         total_dispatches = total_dispatches_result.scalar() or 0
@@ -232,6 +248,7 @@ class StatsService:
             select(EventLog, Topic, Source)
             .join(Topic, EventLog.topic_id == Topic.id)
             .join(Source, Topic.source_id == Source.id)
+            .where(EventLog.is_test == False)
             .order_by(EventLog.received_at.desc())
             .limit(10)
         )
@@ -253,17 +270,17 @@ class StatsService:
     ) -> List[Dict[str, Any]]:
         """獲取每日趨勢統計"""
 
-        # 獲取每日總數 (來自 EventLog)
+        # 獲取每日總數 (來自 EventLog，排除測試事件)
         daily_total_result = await db.execute(
             select(
                 func.date(EventLog.received_at).label("date"),
                 func.count(EventLog.id).label("total"),
             )
-            .where(EventLog.received_at >= start_date)
+            .where(and_(EventLog.received_at >= start_date, EventLog.is_test == False))
             .group_by(func.date(EventLog.received_at))
         )
 
-        # 獲取每日成功數和失敗數 (來自 DispatchLog)
+        # 獲取每日成功數和失敗數 (來自 DispatchLog，排除測試事件)
         daily_dispatch_result = await db.execute(
             select(
                 func.date(EventLog.received_at).label("date"),
@@ -272,7 +289,7 @@ class StatsService:
             )
             .select_from(DispatchLog)
             .join(EventLog, DispatchLog.event_log_id == EventLog.id)
-            .where(EventLog.received_at >= start_date)
+            .where(and_(EventLog.received_at >= start_date, EventLog.is_test == False))
             .group_by(func.date(EventLog.received_at))
         )
 
@@ -309,17 +326,17 @@ class StatsService:
 
         today_start = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        # 獲取每小時總數 (來自 EventLog)
+        # 獲取每小時總數 (來自 EventLog，排除測試事件)
         hourly_total_result = await db.execute(
             select(
                 func.extract("hour", EventLog.received_at).label("hour"),
                 func.count(EventLog.id).label("total"),
             )
-            .where(EventLog.received_at >= today_start)
+            .where(and_(EventLog.received_at >= today_start, EventLog.is_test == False))
             .group_by(func.extract("hour", EventLog.received_at))
         )
 
-        # 獲取每小時成功數和失敗數 (來自 DispatchLog)
+        # 獲取每小時成功數和失敗數 (來自 DispatchLog，排除測試事件)
         hourly_dispatch_result = await db.execute(
             select(
                 func.extract("hour", EventLog.received_at).label("hour"),
@@ -328,7 +345,7 @@ class StatsService:
             )
             .select_from(DispatchLog)
             .join(EventLog, DispatchLog.event_log_id == EventLog.id)
-            .where(EventLog.received_at >= today_start)
+            .where(and_(EventLog.received_at >= today_start, EventLog.is_test == False))
             .group_by(func.extract("hour", EventLog.received_at))
         )
 

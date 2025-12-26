@@ -107,6 +107,7 @@ class LogService:
         headers: dict[str, str],
         source_ip: str,
         status: EventLogStatus,
+        is_test: bool = False,
     ) -> EventLog:
         """
         創建事件記錄
@@ -119,6 +120,7 @@ class LogService:
             source_ip: 來源IP
             status: 事件狀態
             db: 數據庫會話
+            is_test: 是否為測試事件（預設為 False）
 
         Returns:
             EventLog: 創建的事件記錄
@@ -133,6 +135,7 @@ class LogService:
             headers=normalized_headers,
             source_ip=source_ip,
             status=status,  # 使用枚舉的值
+            is_test=is_test,
         )
 
         db.add(event_log)

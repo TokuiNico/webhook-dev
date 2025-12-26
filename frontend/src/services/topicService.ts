@@ -12,7 +12,9 @@ import type {
   TopicFilterParams,
   TopicStats,
   TopicError,
-  ApiResponse
+  ApiResponse,
+  WebhookTestRequest,
+  WebhookTestResponse
 } from '../types/topic'
 import { authService } from './authService';
 import { env } from '../config/env';
@@ -297,6 +299,39 @@ class TopicService {
           'Content-Type': 'application/json',
         },
       })
+
+      return {
+        data: response.data,
+        loading: false,
+        error: undefined
+      }
+    } catch (error) {
+      return this.handleApiError(error)
+    }
+  }
+
+  /**
+   * 測試 webhook 接收功能
+   * @param topicId 主題 ID
+   * @param testRequest 測試請求數據
+   */
+  async testWebhook(topicId: string, testRequest: WebhookTestRequest): Promise<ApiResponse<WebhookTestResponse>> {
+    try {
+      const token = authService.getCurrentToken();
+      if (!token) {
+        throw new Error('未登入');
+      }
+
+      const response = await axios.post<WebhookTestResponse>(
+        `${this.baseUrl}/${topicId}/test`,
+        testRequest,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      )
 
       return {
         data: response.data,

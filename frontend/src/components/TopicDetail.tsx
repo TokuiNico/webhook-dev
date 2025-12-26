@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { topicService } from '../services/topicService'
 import { sourceService } from '../services/sourceService'
 import { statsService } from '../services/statsService'
-import type { TopicResponse } from '../types/topic'
+import type { TopicResponse, WebhookTestResponse } from '../types/topic'
 import type { SourceResponse } from '../types/source'
 
 /**
@@ -26,6 +26,13 @@ export const TopicDetail = () => {
   const [subscribersLoading, setSubscribersLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Webhook 測試工具狀態
+  const [testExpanded, setTestExpanded] = useState(false)
+  const [testPayload, setTestPayload] = useState('{\n  "event": "test",\n  "data": "test data"\n}')
+  const [testContentType, setTestContentType] = useState('application/json')
+  const [testLoading, setTestLoading] = useState(false)
+  const [testResult, setTestResult] = useState<WebhookTestResponse | null>(null)
 
   // 載入主題和來源數據
   useEffect(() => {
@@ -107,6 +114,51 @@ export const TopicDetail = () => {
       }
     } catch (err) {
       alert('刪除主題時發生錯誤')
+    }
+  }
+
+  // 處理 webhook 測試
+  const handleTestWebhook = async () => {
+    if (!topicId || !testPayload.trim()) {
+      alert('請輸入測試 payload')
+      return
+    }
+
+    setTestLoading(true)
+    setTestResult(null)
+
+    try {
+      const testRequest = {
+        payload: testPayload,
+        content_type: testContentType,
+      }
+
+      const response = await topicService.testWebhook(topicId, testRequest)
+
+      if (response.error) {
+        setTestResult({
+          success: false,
+          message: response.error.message || '測試失敗',
+          error: response.error.message,
+        })
+      } else if (response.data) {
+        setTestResult(response.data)
+        // 如果成功，重新載入 webhooks 列表
+        if (response.data.success) {
+          const webhooksResponse = await topicService.getTopicWebhooks(topicId, { limit: 5 })
+          if (webhooksResponse.data) {
+            setWebhooks(webhooksResponse.data.webhooks || [])
+          }
+        }
+      }
+    } catch (err) {
+      setTestResult({
+        success: false,
+        message: '測試時發生錯誤',
+        error: err instanceof Error ? err.message : '未知錯誤',
+      })
+    } finally {
+      setTestLoading(false)
     }
   }
 
@@ -424,6 +476,111 @@ export const TopicDetail = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Webhook 測試工具 */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">測試 Webhook</h2>
+          <button
+            onClick={() => setTestExpanded(!testExpanded)}
+            className="text-sm text-blue-600 hover:text-blue-800"
+          >
+            {testExpanded ? '收起' : '展開'}
+          </button>
+        </div>
+
+        {testExpanded && (
+          <div className="space-y-4">
+            {/* Content-Type 選擇 */}
+            <div>
+              <label htmlFor="testContentType" className="block text-sm font-medium text-gray-700 mb-1">
+                Content-Type
+              </label>
+              <select
+                id="testContentType"
+                value={testContentType}
+                onChange={(e) => setTestContentType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="application/json">application/json</option>
+                <option value="application/xml">application/xml</option>
+                <option value="application/x-www-form-urlencoded">application/x-www-form-urlencoded</option>
+              </select>
+            </div>
+
+            {/* Payload 輸入 */}
+            <div>
+              <label htmlFor="testPayload" className="block text-sm font-medium text-gray-700 mb-1">
+                Payload
+              </label>
+              <textarea
+                id="testPayload"
+                value={testPayload}
+                onChange={(e) => setTestPayload(e.target.value)}
+                rows={10}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                placeholder='輸入測試 payload，例如：{"event": "test", "data": "test data"}'
+              />
+            </div>
+
+            {/* 測試按鈕 */}
+            <div className="flex justify-end">
+              <button
+                onClick={handleTestWebhook}
+                disabled={testLoading || !testPayload.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {testLoading ? '測試中...' : '發送測試'}
+              </button>
+            </div>
+
+            {/* 測試結果 */}
+            {testResult && (
+              <div className={`p-4 rounded-md ${
+                testResult.success
+                  ? 'bg-green-50 border border-green-200'
+                  : 'bg-red-50 border border-red-200'
+              }`}>
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    {testResult.success ? (
+                      <svg className="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="ml-3 flex-1">
+                    <p className={`text-sm font-medium ${
+                      testResult.success ? 'text-green-800' : 'text-red-800'
+                    }`}>
+                      {testResult.success ? '測試成功' : '測試失敗'}
+                    </p>
+                    <p className={`mt-1 text-sm ${
+                      testResult.success ? 'text-green-700' : 'text-red-700'
+                    }`}>
+                      {testResult.message}
+                    </p>
+                    {testResult.error && (
+                      <p className="mt-1 text-xs text-red-600 font-mono">
+                        {testResult.error}
+                      </p>
+                    )}
+                    {testResult.event_log_id && (
+                      <p className="mt-1 text-xs text-gray-600">
+                        事件 ID: {testResult.event_log_id}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 說明資訊 */}
