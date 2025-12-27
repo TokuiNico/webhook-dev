@@ -13,7 +13,9 @@ import type {
   DispatchLogFilterParams,
   UnifiedLogItem,
   UnifiedLogListResponse,
-  LogApiResponse
+  LogApiResponse,
+  HierarchicalLogListResponse,
+  EventLogWithDispatches
 } from '../types/log'
 import { authService } from './authService'
 import { env } from '../config/env'
@@ -267,6 +269,68 @@ class LogService {
           skip: 0,
           limit: filteredItems.length
         },
+        loading: false,
+        error: undefined
+      }
+    } catch (error) {
+      return this.handleApiError(error)
+    }
+  }
+
+  /**
+   * 獲取階層式日誌列表（EventLog作為母日誌，包含DispatchLog計數）
+   * @param filters 篩選參數
+   */
+  async getHierarchicalLogs(filters?: EventLogFilterParams): Promise<LogApiResponse<HierarchicalLogListResponse>> {
+    try {
+      const token = authService.getCurrentToken()
+      if (!token) {
+        throw new Error('未登入')
+      }
+
+      const config: any = {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+
+      if (filters && Object.keys(filters).length > 0) {
+        config.params = filters
+      }
+
+      const response = await axios.get<HierarchicalLogListResponse>(`${this.baseUrl}/hierarchical/`, config)
+
+      return {
+        data: response.data,
+        loading: false,
+        error: undefined
+      }
+    } catch (error) {
+      return this.handleApiError(error)
+    }
+  }
+
+  /**
+   * 獲取特定事件日誌及其所有派發記錄（階層式展開）
+   * @param eventId 事件日誌 ID
+   */
+  async getEventWithDispatches(eventId: string): Promise<LogApiResponse<EventLogWithDispatches>> {
+    try {
+      const token = authService.getCurrentToken()
+      if (!token) {
+        throw new Error('未登入')
+      }
+
+      const response = await axios.get<EventLogWithDispatches>(`${this.baseUrl}/hierarchical/${eventId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      return {
+        data: response.data,
         loading: false,
         error: undefined
       }

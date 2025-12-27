@@ -121,3 +121,22 @@ export interface LogStats {
   recent_errors: number
   last_updated: string
 }
+
+// 帶派發計數的事件日誌
+export interface EventLogWithDispatchCount extends EventLog {
+  dispatch_count: number
+}
+
+// 帶派發記錄的事件日誌（階層式）
+export interface EventLogWithDispatches extends EventLog {
+  dispatch_count: number
+  dispatches: DispatchLog[]
+}
+
+// 階層式日誌列表響應
+export interface HierarchicalLogListResponse {
+  items: EventLogWithDispatchCount[]
+  total: number
+  skip: number
+  limit: number
+}

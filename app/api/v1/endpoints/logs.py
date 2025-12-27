@@ -12,6 +12,8 @@ from app.schemas.log import (
     DispatchLogResponse,
     EventLogListResponse,
     DispatchLogListResponse,
+    HierarchicalLogListResponse,
+    EventLogWithDispatches,
 )
 from app.services.log_service import log_service
 
@@ -168,3 +170,87 @@ async def get_dispatch_log(
     ```
     """
     return await log_service.get_dispatch_log_by_id(db=db, dispatch_id=dispatch_id)
+
+
+@router.get("/hierarchical/", response_model=HierarchicalLogListResponse)
+async def list_hierarchical_logs(
+    topic_id: Optional[str] = Query(None, description="過濾特定主題的事件"),
+    status: Optional[EventLogStatus] = Query(None, description="過濾特定狀態的事件"),
+    skip: int = Query(0, ge=0, description="跳過的記錄數"),
+    limit: int = Query(100, ge=1, le=1000, description="返回的記錄數"),
+    db: AsyncSession = Depends(get_authenticated_db),
+) -> HierarchicalLogListResponse:
+    """
+    列出階層式日誌（EventLog 作為母日誌，包含 DispatchLog 計數）
+
+    查詢所有或過濾後的事件日誌，每個事件包含其關聯的派發日誌數量。
+    用於階層式顯示，預設只顯示母日誌（EventLog），展開時再加載子日誌。
+
+    **查詢參數：**
+    - `topic_id`: 可選，過濾特定主題的事件
+    - `status`: 可選，過濾特定狀態的事件
+    - `skip`: 跳過的記錄數（用於分頁）
+    - `limit`: 返回的記錄數（最大 1000）
+
+    **返回格式：**
+    ```json
+    {
+        "items": [
+            {
+                "id": "01K4AN2JMK0SS161X6G5F30QSD",
+                "topic_id": "01K4AN2JKWCDJSBXAW1DDHRTMJ",
+                "source_ip": "127.0.0.1",
+                "content_type": "application/json",
+                "status": "QUEUED",
+                "received_at": "2025-09-04T15:21:13.107470",
+                "dispatch_count": 3
+            }
+        ],
+        "total": 1,
+        "skip": 0,
+        "limit": 100
+    }
+    ```
+    """
+    return await log_service.get_hierarchical_logs(
+        db=db, topic_id=topic_id, status=status, skip=skip, limit=limit
+    )
+
+
+@router.get("/hierarchical/{event_id}", response_model=EventLogWithDispatches)
+async def get_event_with_dispatches(
+    event_id: str,
+    db: AsyncSession = Depends(get_authenticated_db),
+) -> EventLogWithDispatches:
+    """
+    獲取特定事件日誌及其所有派發記錄（階層式展開）
+
+    **路徑參數：**
+    - `event_id`: 事件日誌 ID (ULID 格式)
+
+    **返回格式：**
+    ```json
+    {
+        "id": "01K4AN2JMK0SS161X6G5F30QSD",
+        "topic_id": "01K4AN2JKWCDJSBXAW1DDHRTMJ",
+        "source_ip": "127.0.0.1",
+        "headers": {"Content-Type": "application/json"},
+        "content_type": "application/json",
+        "payload": "{\"event\": \"test\"}",
+        "status": "QUEUED",
+        "received_at": "2025-09-04T15:21:13.107470",
+        "dispatch_count": 2,
+        "dispatches": [
+            {
+                "id": "01K4AN2JMK0SS161X6G5F30QSE",
+                "event_log_id": "01K4AN2JMK0SS161X6G5F30QSD",
+                "subscription_id": "01K4AN2JM7Z4S4CRRC086F8BQF",
+                "status": "SUCCESS",
+                "response_status_code": 200,
+                "dispatched_at": "2025-09-04T15:21:13.107470"
+            }
+        ]
+    }
+    ```
+    """
+    return await log_service.get_event_with_dispatches(db=db, event_id=event_id)

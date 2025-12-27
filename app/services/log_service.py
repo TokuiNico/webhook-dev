@@ -13,6 +13,9 @@ from app.schemas.log import (
     DispatchLogResponse,
     EventLogListResponse,
     DispatchLogListResponse,
+    EventLogWithDispatchCount,
+    EventLogWithDispatches,
+    HierarchicalLogListResponse,
 )
 
 
@@ -271,6 +274,117 @@ class LogService:
         await db.commit()
         await db.refresh(dispatch_log)
         return dispatch_log
+
+    async def get_hierarchical_logs(
+        self,
+        db: AsyncSession,
+        topic_id: Optional[str] = None,
+        status: Optional[EventLogStatus] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> HierarchicalLogListResponse:
+        """
+        獲取階層式日誌列表（EventLog 作為母日誌，包含 DispatchLog 計數）
+
+        Args:
+            db: 數據庫會話
+            topic_id: 可選，過濾特定主題的事件
+            status: 可選，過濾特定狀態的事件
+            skip: 跳過的記錄數
+            limit: 返回的記錄數
+
+        Returns:
+            HierarchicalLogListResponse: 階層式日誌列表響應
+        """
+        # 建立基礎查詢
+        query = select(EventLog)
+        count_query = select(func.count(EventLog.id))
+
+        # 加入過濾條件
+        conditions = []
+        if topic_id:
+            conditions.append(EventLog.topic_id == topic_id)
+        if status:
+            conditions.append(EventLog.status == status)
+
+        if conditions:
+            query = query.where(*conditions)
+            count_query = count_query.where(*conditions)
+
+        # 獲取總數
+        total_result = await db.execute(count_query)
+        total = total_result.scalar() or 0
+
+        # 加入排序和分頁
+        query = query.order_by(desc(EventLog.received_at)).offset(skip).limit(limit)
+
+        # 執行查詢
+        result = await db.execute(query)
+        events = result.scalars().all()
+
+        # 為每個 EventLog 獲取對應的 DispatchLog 計數
+        items = []
+        for event in events:
+            # 查詢該事件的派發日誌數量
+            dispatch_count_query = select(func.count(DispatchLog.id)).where(
+                DispatchLog.event_log_id == event.id
+            )
+            dispatch_count_result = await db.execute(dispatch_count_query)
+            dispatch_count = dispatch_count_result.scalar() or 0
+
+            # 構建響應對象
+            event_dict = EventLogResponse.model_validate(event).model_dump()
+            event_dict["dispatch_count"] = dispatch_count
+            items.append(EventLogWithDispatchCount(**event_dict))
+
+        return HierarchicalLogListResponse(
+            items=items,
+            total=total,
+            skip=skip,
+            limit=limit,
+        )
+
+    async def get_event_with_dispatches(
+        self, db: AsyncSession, event_id: str
+    ) -> EventLogWithDispatches:
+        """
+        獲取特定事件日誌及其所有派發記錄
+
+        Args:
+            db: 數據庫會話
+            event_id: 事件日誌 ID
+
+        Returns:
+            EventLogWithDispatches: 帶派發記錄的事件日誌
+
+        Raises:
+            HTTPException: 如果事件不存在
+        """
+        # 獲取事件日誌
+        query = select(EventLog).where(EventLog.id == event_id)
+        result = await db.execute(query)
+        event = result.scalar_one_or_none()
+
+        if not event:
+            raise HTTPException(status_code=404, detail="事件日誌不存在")
+
+        # 獲取該事件的所有派發記錄
+        dispatch_query = (
+            select(DispatchLog)
+            .where(DispatchLog.event_log_id == event_id)
+            .order_by(desc(DispatchLog.dispatched_at))
+        )
+        dispatch_result = await db.execute(dispatch_query)
+        dispatches = dispatch_result.scalars().all()
+
+        # 構建響應對象
+        event_dict = EventLogResponse.model_validate(event).model_dump()
+        event_dict["dispatch_count"] = len(dispatches)
+        event_dict["dispatches"] = [
+            DispatchLogResponse.model_validate(dispatch) for dispatch in dispatches
+        ]
+
+        return EventLogWithDispatches(**event_dict)
 
 
 # 創建服務實例
