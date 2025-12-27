@@ -1,8 +1,11 @@
+# Development Docker Compose
+# Usage: docker compose -f docker-compose.dev.yml up --build
+
 services:
   # PostgreSQL Database
   db:
     image: postgres:15-alpine
-    container_name: webhook_db
+    container_name: webhook_db_dev
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-webhook_user}
@@ -12,19 +15,19 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_dev:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-webhook_user} -d ${POSTGRES_DB:-webhook_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - webhook-network
+      - webhook-network-dev
 
   # RabbitMQ Message Broker
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    container_name: webhook_rabbitmq
+    container_name: webhook_rabbitmq_dev
     restart: unless-stopped
     ports:
       - "5672:5672"   # AMQP port
@@ -34,22 +37,22 @@ services:
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin}
       TZ: Asia/Taipei
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_data_dev:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
     networks:
-      - webhook-network
+      - webhook-network-dev
 
-  # API Server (Backend)
+  # API Server (Backend) - Development mode with hot reload
   api:
     build:
       context: .
       dockerfile: Dockerfile
-      target: production
-    container_name: webhook_api
+      target: dev
+    container_name: webhook_api_dev
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -63,31 +66,31 @@ services:
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin}@rabbitmq:5672/
       - USE_SQLITE=false
       - USE_MEMORY_BROKER=false
-      - DEVELOPMENT=false
-      - API_KEY=${API_KEY:-change-me-in-production}
+      - DEVELOPMENT=true
+      - API_KEY=${API_KEY:-dev-api-key}
       - CORS_ORIGINS=["*"]
       - TZ=Asia/Taipei
     env_file:
       - .env
     volumes:
-      - ./logs:/app/logs
+      - .:/app  # Mount source code for hot reload
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
     networks:
-      - webhook-network
+      - webhook-network-dev
 
-  # TaskIQ Worker
+  # TaskIQ Worker - Development mode with hot reload
   worker:
     build:
       context: .
       dockerfile: Dockerfile
-      target: production
-    container_name: webhook_worker
+      target: dev
+    container_name: webhook_worker_dev
     restart: unless-stopped
-    command: taskiq worker app.taskiq.broker_manager:broker
+    command: taskiq worker app.taskiq.broker_manager:broker --reload
     depends_on:
       db:
         condition: service_healthy
@@ -98,36 +101,38 @@ services:
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin}@rabbitmq:5672/
       - USE_SQLITE=false
       - USE_MEMORY_BROKER=false
-      - DEVELOPMENT=false
+      - DEVELOPMENT=true
       - TZ=Asia/Taipei
     env_file:
       - .env
     volumes:
-      - ./logs:/app/logs
+      - .:/app  # Mount source code for hot reload
     networks:
-      - webhook-network
+      - webhook-network-dev
 
-  # Frontend (Nginx + React App)
+  # Frontend (Vite Dev Server) - Development mode with HMR
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: webhook_frontend
+    image: node:20-alpine
+    container_name: webhook_frontend_dev
+    working_dir: /app/frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "3000:3000"
     environment:
       - TZ=Asia/Taipei
+    volumes:
+      - ./frontend:/app/frontend
+    command: sh -c "npm install && npm run dev -- --host"
     depends_on:
       api:
         condition: service_healthy
     networks:
-      - webhook-network
+      - webhook-network-dev
 
 networks:
-  webhook-network:
+  webhook-network-dev:
     driver: bridge
 
 volumes:
-  postgres_data:
-  rabbitmq_data:
+  postgres_data_dev:
+  rabbitmq_data_dev:

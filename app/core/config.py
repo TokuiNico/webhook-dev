@@ -34,6 +34,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        extra = "ignore"  # Ignore extra fields from .env (e.g., RABBITMQ_USER)
 
 
 settings = Settings()

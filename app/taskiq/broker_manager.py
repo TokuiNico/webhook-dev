@@ -37,8 +37,14 @@ class TaskiqBrokerManager:
                     )
                 )
             else:
-                logger.info("🚀 使用 AioPikaBroker 連接 RabbitMQ")
-                self._broker = AioPikaBroker(settings.RABBITMQ_URL).with_middlewares(
+                logger.info("🚀 使用 AioPikaBroker 連接 RabbitMQ (Quorum Queue)")
+                self._broker = AioPikaBroker(
+                    settings.RABBITMQ_URL,
+                    declare_queues_kwargs={
+                        "durable": True,  # Quorum queues must be durable
+                        "arguments": {"x-queue-type": "quorum"}
+                    },
+                ).with_middlewares(
                     SmartRetryMiddleware(
                         default_retry_count=3,
                         default_delay=60,
