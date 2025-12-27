@@ -12,11 +12,14 @@ import {
   Globe,
   Server,
   Code,
-  Loader2
+  Loader2,
+  FileJson,
+  List
 } from 'lucide-react'
 import { logService } from '../services/logService'
 import type {
   EventLogWithDispatchCount,
+  EventLogWithDispatches,
   DispatchLog,
   HierarchicalLogListResponse,
   LogApiResponse
@@ -43,10 +46,12 @@ export const LogList = ({
 
   // 展開狀態：記錄哪些 EventLog 已展開
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set())
-  // 子日誌數據：記錄每個 EventLog 的 DispatchLog
-  const [dispatchesMap, setDispatchesMap] = useState<Map<string, DispatchLog[]>>(new Map())
-  // 載入狀態：記錄哪些 EventLog 的子日誌正在載入
-  const [loadingDispatches, setLoadingDispatches] = useState<Set<string>>(new Set())
+  // 展開狀態：記錄哪些 DispatchLog 已展開（顯示 response）
+  const [expandedDispatches, setExpandedDispatches] = useState<Set<string>>(new Set())
+  // 完整事件資料：記錄每個 EventLog 的完整資料
+  const [eventDetailsMap, setEventDetailsMap] = useState<Map<string, EventLogWithDispatches>>(new Map())
+  // 載入狀態：記錄哪些 EventLog 的詳細資料正在載入
+  const [loadingEventDetails, setLoadingEventDetails] = useState<Set<string>>(new Set())
 
   const loadLogs = async () => {
     setLoading(true)
@@ -95,25 +100,45 @@ export const LogList = ({
       newExpanded.add(eventId)
       setExpandedEvents(newExpanded)
 
-      // 如果還沒有載入過該事件的派發記錄，則載入
-      if (!dispatchesMap.has(eventId)) {
-        setLoadingDispatches(prev => new Set(prev).add(eventId))
+      // 如果還沒有載入過該事件的完整資料，則載入
+      if (!eventDetailsMap.has(eventId)) {
+        setLoadingEventDetails(prev => new Set(prev).add(eventId))
 
         try {
           const result = await logService.getEventWithDispatches(eventId)
-          if (result.data && result.data.dispatches) {
-            setDispatchesMap(prev => new Map(prev).set(eventId, result.data.dispatches))
+          if (result.data) {
+            setEventDetailsMap(prev => new Map(prev).set(eventId, result.data))
           }
         } catch (error) {
-          console.error('載入派發記錄失敗:', error)
+          console.error('載入事件詳細資料失敗:', error)
         } finally {
-          setLoadingDispatches(prev => {
+          setLoadingEventDetails(prev => {
             const newSet = new Set(prev)
             newSet.delete(eventId)
             return newSet
           })
         }
       }
+    }
+  }
+
+  const toggleDispatchExpanded = (dispatchId: string) => {
+    const newExpanded = new Set(expandedDispatches)
+    if (newExpanded.has(dispatchId)) {
+      newExpanded.delete(dispatchId)
+    } else {
+      newExpanded.add(dispatchId)
+    }
+    setExpandedDispatches(newExpanded)
+  }
+
+  const formatJson = (jsonString: string | null | undefined): string => {
+    if (!jsonString) return '// No data'
+    try {
+      const parsed = JSON.parse(jsonString)
+      return JSON.stringify(parsed, null, 2)
+    } catch {
+      return jsonString
     }
   }
 
@@ -194,8 +219,9 @@ export const LogList = ({
           logs.map((event) => {
             const statusConfig = getStatusConfig(event.status)
             const isExpanded = expandedEvents.has(event.id)
-            const isLoadingDispatches = loadingDispatches.has(event.id)
-            const dispatches = dispatchesMap.get(event.id) || []
+            const isLoadingDetails = loadingEventDetails.has(event.id)
+            const eventDetails = eventDetailsMap.get(event.id)
+            const dispatches = eventDetails?.dispatches || []
 
             return (
               <div key={event.id} className="group">
@@ -251,68 +277,162 @@ export const LogList = ({
                   </div>
                 </div>
 
-                {/* 子日誌：DispatchLog */}
+                {/* EventLog 展開區域 */}
                 {isExpanded && (
-                  <div className="border-t border-slate-100 bg-slate-50/30 px-4 py-3 pl-[4.5rem]">
-                    {isLoadingDispatches ? (
+                  <div className="border-t border-slate-100 bg-slate-50/30 p-4">
+                    {isLoadingDetails ? (
                       <div className="flex items-center gap-2 text-slate-500 py-4">
                         <Loader2 className="animate-spin" size={16} />
-                        <span>載入派發記錄...</span>
+                        <span>載入詳細資料...</span>
                       </div>
-                    ) : dispatches.length === 0 ? (
-                      <div className="text-sm text-slate-500 py-3">
-                        此事件沒有派發記錄
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {dispatches.map((dispatch) => {
-                          const dispatchStatus = getStatusConfig(dispatch.status)
-                          return (
-                            <div
-                              key={dispatch.id}
-                              className="bg-white rounded-lg border border-slate-200 p-3 hover:border-purple-300 transition-colors"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="flex-shrink-0">
-                                  <div className="p-1.5 rounded bg-purple-50 text-purple-600">
-                                    <Globe size={16} />
-                                  </div>
-                                </div>
+                    ) : eventDetails ? (
+                      <div className="space-y-4">
+                        {/* EventLog 詳細資訊 */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {/* Payload */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-slate-700">
+                              <FileJson size={16} />
+                              Payload
+                            </div>
+                            <div className="bg-slate-900 rounded-lg p-3 border border-slate-800 shadow-inner max-h-64 overflow-y-auto">
+                              <pre className="font-mono text-xs text-emerald-400 whitespace-pre-wrap break-words">
+                                {formatJson(eventDetails.payload)}
+                              </pre>
+                            </div>
+                          </div>
 
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold uppercase ${dispatchStatus.color}`}>
-                                      {dispatchStatus.icon}
-                                      {dispatch.status || 'UNKNOWN'}
-                                    </span>
-                                    <span className="text-xs font-mono text-slate-400">
-                                      #{dispatch.id.slice(0, 8)}
-                                    </span>
-                                    {dispatch.response_status_code && (
-                                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${dispatch.response_status_code >= 200 && dispatch.response_status_code < 300
-                                          ? 'bg-emerald-100 text-emerald-700'
-                                          : 'bg-rose-100 text-rose-700'
-                                        }`}>
-                                        HTTP {dispatch.response_status_code}
-                                      </span>
+                          {/* Headers */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-slate-700">
+                              <List size={16} />
+                              Headers
+                            </div>
+                            <div className="bg-white rounded-lg border border-slate-200 p-3 max-h-64 overflow-y-auto">
+                              <div className="font-mono text-xs text-slate-600 space-y-1">
+                                {eventDetails.headers && Object.entries(eventDetails.headers).map(([key, value]) => (
+                                  <div key={key} className="flex gap-2">
+                                    <span className="text-primary-600 font-semibold min-w-[120px] shrink-0">{key}:</span>
+                                    <span className="break-all">{String(value)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* DispatchLog 列表 */}
+                        {dispatches.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3 text-sm font-semibold text-slate-700">
+                              <Globe size={16} />
+                              派發記錄 ({dispatches.length})
+                            </div>
+                            <div className="space-y-2">
+                              {dispatches.map((dispatch) => {
+                                const dispatchStatus = getStatusConfig(dispatch.status)
+                                const isDispatchExpanded = expandedDispatches.has(dispatch.id)
+
+                                return (
+                                  <div
+                                    key={dispatch.id}
+                                    className="bg-white rounded-lg border border-slate-200 overflow-hidden"
+                                  >
+                                    {/* DispatchLog 摘要（可點擊） */}
+                                    <div
+                                      className="p-3 cursor-pointer hover:bg-purple-50/50 transition-colors"
+                                      onClick={() => toggleDispatchExpanded(dispatch.id)}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <div className="flex-shrink-0">
+                                          <div className="p-1.5 rounded bg-purple-50 text-purple-600">
+                                            <Globe size={16} />
+                                          </div>
+                                        </div>
+
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold uppercase ${dispatchStatus.color}`}>
+                                              {dispatchStatus.icon}
+                                              {dispatch.status || 'UNKNOWN'}
+                                            </span>
+                                            <span className="text-xs font-mono text-slate-400">
+                                              #{dispatch.id.slice(0, 8)}
+                                            </span>
+                                            {dispatch.response_status_code && (
+                                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${dispatch.response_status_code >= 200 && dispatch.response_status_code < 300
+                                                  ? 'bg-emerald-100 text-emerald-700'
+                                                  : 'bg-rose-100 text-rose-700'
+                                                }`}>
+                                                HTTP {dispatch.response_status_code}
+                                              </span>
+                                            )}
+                                          </div>
+
+                                          <div className="text-xs text-slate-600">
+                                            發送到訂閱者 • {new Date(dispatch.dispatched_at).toLocaleString('zh-TW')}
+                                          </div>
+                                        </div>
+
+                                        <div className="text-slate-400">
+                                          {isDispatchExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                        </div>
+                                      </div>
+
+                                      {dispatch.error_message && !isDispatchExpanded && (
+                                        <div className="mt-2 text-xs text-rose-600 bg-rose-50 rounded px-2 py-1">
+                                          {dispatch.error_message}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* DispatchLog 詳細資訊（展開後） */}
+                                    {isDispatchExpanded && (
+                                      <div className="border-t border-slate-100 bg-slate-50 p-3">
+                                        <div className="space-y-3">
+                                          {/* Response Body */}
+                                          <div>
+                                            <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-slate-700">
+                                              <Code size={14} />
+                                              Response Body
+                                            </div>
+                                            <div className="bg-slate-900 rounded-lg p-3 border border-slate-800 shadow-inner max-h-48 overflow-y-auto">
+                                              <pre className="font-mono text-xs text-emerald-400 whitespace-pre-wrap break-words">
+                                                {formatJson(dispatch.response_body)}
+                                              </pre>
+                                            </div>
+                                          </div>
+
+                                          {/* Error Message */}
+                                          {dispatch.error_message && (
+                                            <div>
+                                              <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-rose-700">
+                                                <AlertCircle size={14} />
+                                                錯誤訊息
+                                              </div>
+                                              <div className="bg-rose-50 border border-rose-100 rounded-lg p-3 text-xs text-rose-700">
+                                                {dispatch.error_message}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
-
-                                  <div className="text-xs text-slate-600">
-                                    發送到訂閱者 • {new Date(dispatch.dispatched_at).toLocaleString('zh-TW')}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {dispatch.error_message && (
-                                <div className="mt-2 text-xs text-rose-600 bg-rose-50 rounded px-2 py-1">
-                                  {dispatch.error_message}
-                                </div>
-                              )}
+                                )
+                              })}
                             </div>
-                          )
-                        })}
+                          </div>
+                        )}
+
+                        {dispatches.length === 0 && (
+                          <div className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded-lg border border-slate-200">
+                            此事件沒有派發記錄
+                          </div>
+                        )}
                       </div>
+                    ) : (
+                      <div className="text-center py-4 text-slate-400">無法載入詳細資料</div>
                     )}
                   </div>
                 )}
