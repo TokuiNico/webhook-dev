@@ -286,6 +286,8 @@ class LogService:
         """
         獲取階層式日誌列表（EventLog 作為母日誌，包含 DispatchLog 計數）
 
+        使用 LEFT JOIN 和聚合查詢避免 N+1 查詢問題
+
         Args:
             db: 數據庫會話
             topic_id: 可選，過濾特定主題的事件
@@ -296,8 +298,20 @@ class LogService:
         Returns:
             HierarchicalLogListResponse: 階層式日誌列表響應
         """
-        # 建立基礎查詢
-        query = select(EventLog)
+        from sqlalchemy import case
+
+        # 建立基礎查詢，使用 LEFT JOIN 和 COUNT 聚合
+        # 這樣可以一次性獲取所有 EventLog 及其對應的 DispatchLog 計數
+        query = (
+            select(
+                EventLog,
+                func.count(DispatchLog.id).label("dispatch_count"),
+            )
+            .outerjoin(DispatchLog, EventLog.id == DispatchLog.event_log_id)
+            .group_by(EventLog.id)
+        )
+
+        # 計數查詢（用於分頁）
         count_query = select(func.count(EventLog.id))
 
         # 加入過濾條件
@@ -320,19 +334,11 @@ class LogService:
 
         # 執行查詢
         result = await db.execute(query)
-        events = result.scalars().all()
+        rows = result.all()
 
-        # 為每個 EventLog 獲取對應的 DispatchLog 計數
+        # 構建響應對象
         items = []
-        for event in events:
-            # 查詢該事件的派發日誌數量
-            dispatch_count_query = select(func.count(DispatchLog.id)).where(
-                DispatchLog.event_log_id == event.id
-            )
-            dispatch_count_result = await db.execute(dispatch_count_query)
-            dispatch_count = dispatch_count_result.scalar() or 0
-
-            # 構建響應對象
+        for event, dispatch_count in rows:
             event_dict = EventLogResponse.model_validate(event).model_dump()
             event_dict["dispatch_count"] = dispatch_count
             items.append(EventLogWithDispatchCount(**event_dict))
