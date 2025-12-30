@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/* Disable dark mode by making the dark: variant never match */
+@custom-variant dark (&:where(.force-dark, .force-dark *));
+
+@theme {
+  --color-brand-primary: #6366f1;
+  --color-brand-secondary: #8b5cf6;
+  --color-surface-card: #ffffff;
+  --color-surface-bg: #f8fafc;
+  --color-surface-muted: #f1f5f9;
+}
+
+:root {
+  --background: var(--color-surface-bg);
+  --foreground: #0f172a;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
